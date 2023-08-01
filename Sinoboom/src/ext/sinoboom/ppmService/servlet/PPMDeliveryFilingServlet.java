@@ -120,7 +120,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 		return null;
 	}
 
-	/**
+	/**test
 	 * 根据项目编号得到产品id
 	 */
 	private List<String> getProductId(String vulue) throws Exception {

@@ -120,7 +120,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 		return null;
 	}
 
-	/**
+	/**test
 	 * 根据项目编号得到产品id
 	 */
 	private List<String> getProductId(String vulue) throws Exception {
@@ -133,7 +133,6 @@ public class PPMDeliveryFilingServlet implements Controller {
 		// 设置参数值
 		statement.setString(1, vulue);
 		ResultSet executeQuery = statement.executeQuery();
-
 		List<String> resultList = new ArrayList<>();
 
 		while (executeQuery.next()) {
@@ -185,6 +184,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 
 		WTConnection con = CommUtil.getWTConnection();
 		PreparedStatement statement = con.prepareStatement(SelectQuery);
+		
 		// 设置参数值
 		statement.setString(1, folderId);
 		statement.setString(2, name);

@@ -133,7 +133,6 @@ public class PPMDeliveryFilingServlet implements Controller {
 		// 设置参数值
 		statement.setString(1, vulue);
 		ResultSet executeQuery = statement.executeQuery();
-
 		List<String> resultList = new ArrayList<>();
 
 		while (executeQuery.next()) {

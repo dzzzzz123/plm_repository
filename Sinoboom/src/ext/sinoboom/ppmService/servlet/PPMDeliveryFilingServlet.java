@@ -184,6 +184,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 
 		WTConnection con = CommUtil.getWTConnection();
 		PreparedStatement statement = con.prepareStatement(SelectQuery);
+		
 		// 设置参数值
 		statement.setString(1, folderId);
 		statement.setString(2, name);

@@ -35,6 +35,7 @@ import wt.pom.Transaction;
 import wt.pom.WTConnection;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
+import wt.util.WTException;
 
 public class PPMDeliveryFilingServlet implements Controller {
 
@@ -51,7 +52,6 @@ public class PPMDeliveryFilingServlet implements Controller {
 
 		Transaction t = new Transaction();
 		try {
-
 			BufferedReader streamReader = new BufferedReader(new InputStreamReader(request.getInputStream(), "UTF-8"));
 			StringBuilder responseStrBuilder = new StringBuilder();
 			String inputStr;
@@ -74,11 +74,25 @@ public class PPMDeliveryFilingServlet implements Controller {
 			for (String item : productIds) {
 				PDMLinkProduct product = (PDMLinkProduct) getObjByOR(PDMLinkProduct.class, item);
 				WTContainerRef containerRef = WTContainerRef.newWTContainerRef(product);
-				WTDocument doc = WTDocument.newWTDocument();
-				doc.setName(projectName);
 
 				Folder folder = FolderHelper.service.getFolder(folderPath, containerRef);
+				String documentId = null;
+				Long oid = getFolderOid(folder);
+				if ("/Default".equals(folderPath)) {
+					documentId = getDocumentId("0", projectName, "AND WTDocument.IDA3A2FOLDERINGINFO ='" + oid + "'");
+				} else {
+					documentId = getDocumentId(oid.toString(), projectName);
+				}
+
+				if (documentId != null) {
+					WTDocument wtDocument = (WTDocument) getObjByOR(WTDocument.class, documentId);
+					PersistenceHelper.manager.delete(wtDocument);
+				}
+
+				WTDocument doc = WTDocument.newWTDocument();
+				doc.setName(projectName);
 				FolderHelper.assignLocation((FolderEntry) doc, folder);
+
 				doc = (WTDocument) wt.fc.PersistenceHelper.manager.store(doc);
 
 				URLData data = URLData.newURLData(doc);
@@ -134,7 +148,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 	/**
 	 * 根据id获取对象
 	 */
-	private static Object getObjByOR(Class queryClass, String or) {
+	private Object getObjByOR(Class queryClass, String or) {
 		try {
 			if (StringUtils.isBlank(or)) {
 				return null;
@@ -151,6 +165,61 @@ public class PPMDeliveryFilingServlet implements Controller {
 		}
 		return null;
 
+	}
+
+	private Long getFolderOid(Folder folder) throws WTException {
+		Long id = PersistenceHelper.getObjectIdentifier(folder).getId();
+		return id;
+	}
+
+	/**
+	 * 根据Folder id 与name获取匹配document
+	 * 
+	 * @throws Exception
+	 */
+
+	private String getDocumentId(String folderId, String name) throws Exception {
+		String SelectQuery = "SELECT WTDocument.IDA2A2 FROM WTDOCUMENT\r\n"
+				+ "INNER JOIN WTDOCUMENTMASTER ON WTDOCUMENT.IDA3MASTERREFERENCE = WTDOCUMENTMASTER.IDA2A2\r\n"
+				+ "WHERE WTDocument.IDA3B2FOLDERINGINFO= ? AND WTDOCUMENTMASTER.NAME = ?  ORDER BY WTDocument.CREATESTAMPA2 DESC FETCH FIRST 1 ROW ONLY";
+
+		WTConnection con = CommUtil.getWTConnection();
+		PreparedStatement statement = con.prepareStatement(SelectQuery);
+		// 设置参数值
+		statement.setString(1, folderId);
+		statement.setString(2, name);
+
+		ResultSet executeQuery = statement.executeQuery();
+		String id = null;
+
+		while (executeQuery.next()) {
+			id = executeQuery.getString(1);
+			System.out.println("DocmentIda2a2:" + id);
+		}
+
+		return id;
+	}
+
+	private String getDocumentId(String folderId, String name, String str) throws Exception {
+		String SelectQuery = "SELECT WTDocument.IDA2A2 FROM WTDOCUMENT\r\n"
+				+ "INNER JOIN WTDOCUMENTMASTER ON WTDOCUMENT.IDA3MASTERREFERENCE = WTDOCUMENTMASTER.IDA2A2\r\n"
+				+ "WHERE WTDocument.IDA3B2FOLDERINGINFO= ? AND WTDOCUMENTMASTER.NAME = ? " + str
+				+ " ORDER BY WTDocument.CREATESTAMPA2 DESC FETCH FIRST 1 ROW ONLY";
+
+		WTConnection con = CommUtil.getWTConnection();
+		PreparedStatement statement = con.prepareStatement(SelectQuery);
+		// 设置参数值
+		statement.setString(1, folderId);
+		statement.setString(2, name);
+		ResultSet executeQuery = statement.executeQuery();
+		String id = null;
+
+		while (executeQuery.next()) {
+			id = executeQuery.getString(1);
+			System.out.println("DocmentIda2a2:" + id);
+		}
+
+		return id;
 	}
 
 }

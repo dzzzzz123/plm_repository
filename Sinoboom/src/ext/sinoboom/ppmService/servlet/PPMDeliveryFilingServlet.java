@@ -106,9 +106,9 @@ public class PPMDeliveryFilingServlet implements Controller {
 
 			}
 			t.commit();
-			out.print(ResponseMessage.of().status(200).message("该项目的交付件已成功归档"));
+			out.print(ResponseMessage.of().msg("该项目交付件已成功归档").code(0));
 		} catch (Exception e) {
-			out.print(ResponseMessage.of().status(301).message("交付件归档失败，请联系管理员-- " + e));
+			out.print(ResponseMessage.of().code(0).msg("交付件归档失败，请联系管理员-- " + e.getMessage()));
 			e.printStackTrace();
 			t.rollback();
 		}
@@ -133,6 +133,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 		// 设置参数值
 		statement.setString(1, vulue);
 		ResultSet executeQuery = statement.executeQuery();
+
 		List<String> resultList = new ArrayList<>();
 
 		while (executeQuery.next()) {
@@ -184,7 +185,6 @@ public class PPMDeliveryFilingServlet implements Controller {
 
 		WTConnection con = CommUtil.getWTConnection();
 		PreparedStatement statement = con.prepareStatement(SelectQuery);
-		
 		// 设置参数值
 		statement.setString(1, folderId);
 		statement.setString(2, name);

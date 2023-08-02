@@ -21,6 +21,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.Controller;
 
 import ext.sinoboom.ppmService.config.PPMConfig;
+import ext.sinoboom.ppmService.entity.ResponseMessage;
 import ext.sinoboom.ppmService.util.CommUtil;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
@@ -81,9 +82,9 @@ public class PPMProductInfoServlet implements Controller {
 				}
 			}
 
-			out.print(resultJson.toString());
+			out.print(ResponseMessage.of().msg("获取产品库地址成功").code(0).data(resultJson));
 		} catch (Exception e) {
-			out.print(e.getMessage());
+			out.print(ResponseMessage.of().msg("获取产品库地址失败").code(-1));
 			e.printStackTrace();
 		}
 

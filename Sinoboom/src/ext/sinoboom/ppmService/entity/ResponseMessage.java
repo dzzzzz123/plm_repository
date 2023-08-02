@@ -1,31 +1,31 @@
 package ext.sinoboom.ppmService.entity;
 
-import org.apache.poi.ss.formula.functions.T;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ResponseMessage {
 
-	private int status;
-	private String message;
-	private T data;
+	private String msg;
+	private int code;
+	private JSONArray data;
 
 	public static ResponseMessage of() {
 		return new ResponseMessage();
 	}
 
-	public ResponseMessage status(int status) {
-		this.status = status;
+	public ResponseMessage code(int code) {
+		this.code = code;
 		return this;
 	}
 
-	public ResponseMessage message(String message) {
-		this.message = message;
+	public ResponseMessage msg(String msg) {
+		this.msg = msg;
 		return this;
 	}
 
-	public ResponseMessage data(T data) {
-		this.data = data;
+	public ResponseMessage data(JSONArray resultJson) {
+		this.data = resultJson;
 		return this;
 	}
 
@@ -33,8 +33,8 @@ public class ResponseMessage {
 	public String toString() {
 		JSONObject json = new JSONObject();
 		try {
-			json.put("status", status);
-			json.put("message", message);
+			json.put("code", code);
+			json.put("msg", msg);
 			json.put("data", data);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block

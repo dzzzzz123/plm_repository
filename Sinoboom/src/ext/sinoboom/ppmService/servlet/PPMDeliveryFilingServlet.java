@@ -108,7 +108,7 @@ public class PPMDeliveryFilingServlet implements Controller {
 			t.commit();
 			out.print(ResponseMessage.of().msg("该项目交付件已成功归档").code(0));
 		} catch (Exception e) {
-			out.print(ResponseMessage.of().code(0).msg("交付件归档失败，请联系管理员-- " + e.getMessage()));
+			out.print(ResponseMessage.of().code(-1).msg("交付件归档失败，请联系管理员-- " + e.getMessage()));
 			e.printStackTrace();
 			t.rollback();
 		}

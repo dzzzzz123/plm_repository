@@ -10,6 +10,7 @@ import wt.fc.Persistable;
 import wt.fc.collections.WTCollection;
 import wt.lifecycle.LifeCycleManaged;
 import wt.lifecycle.LifeCycleServiceEvent;
+import wt.lifecycle.LifeCycleState;
 import wt.part.WTPart;
 import wt.services.ManagerException;
 import wt.services.ManagerService;
@@ -32,15 +33,9 @@ public class CustomWVSMessageService extends StandardManager implements WVSMessa
 		getManagerService().addEventListener(new ServiceEventListenerAdapter(this.getConceptualClassname()) {
 			public void notifyVetoableMultiObjectEvent(Object event) {
 
-				if (event instanceof KeyedEvent) {
-					System.out.println("event instanceof KeyedEvent");
-					System.out.println("event" + event);
-				} else {
-					System.out.println("event not instanceof KeyedEvent ");
-					System.out.println("event" + event);
+				if (!(event instanceof KeyedEvent)) {
 					return;
 				}
-
 				KeyedEvent eventObject = (KeyedEvent) event;
 				Object target = eventObject.getEventTarget();
 
@@ -68,30 +63,27 @@ public class CustomWVSMessageService extends StandardManager implements WVSMessa
 	protected void process(LifeCycleServiceEvent event, Object target) {
 
 		try {
-			System.out.println("GOT STATE CHANGE EVENT");
-			System.out.println(event);
-
 			// INSERT CUSTOM EVENT PROCESSING HERE
 			if (target instanceof wt.fc.collections.WTCollection) {
 				Iterator objsIt = ((WTCollection) target).persistableIterator();
 
 				while (objsIt.hasNext()) {
 					Persistable p = (Persistable) objsIt.next();
-					String currentState = ((LifeCycleManaged) p).getLifeCycleState().toString();
-					System.out.println("The current lifecycle is (" + currentState + ")");
-
+					LifeCycleState currentState = ((LifeCycleManaged) p).getState();
+					System.out.println("The current lifecycle is  " + currentState.toString());
+					System.out.println("Persistable:" + p);
 					if (p instanceof WTPart) {
-						System.out.println("p is a WTPart");
+						WTPart ref = (WTPart) p;
+						Util.alterRefByRefUrl(ref, currentState);
 						break;
 					} else if (p instanceof PartList) {
-						System.out.println("p is a PartList");
+						PartList partList = (PartList) p;
+						Util.alterRefByPartList(partList, currentState);
 						break;
 					}
-
 				}
 			} else {
-				System.out.println("not WTCollection");
-				System.out.println(target.getClass());
+				System.out.println("not WTCollection  " + target.getClass());
 			}
 
 		} catch (Exception e) {

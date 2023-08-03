@@ -1,6 +1,7 @@
 package ext.sinoboom.publishStructure;
 
 import java.io.Serializable;
+import java.util.HashSet;
 
 import wt.events.KeyedEvent;
 import wt.events.KeyedEventListener;
@@ -17,8 +18,6 @@ public class MaintainUrlListenerService extends StandardManager implements Maint
 	private static final long serialVersionUID = 1L;
 	private static final String CLASSNAME = MaintainUrlListenerService.class.getName();
 	private KeyedEventListener listener;
-
-	String innerName = PropertiesHelper.getStrFromProperties(Util.partListRefInnerName);
 
 	public String getConceptualClassname() {
 		return CLASSNAME;
@@ -49,10 +48,14 @@ public class MaintainUrlListenerService extends StandardManager implements Maint
 			}
 			Persistable target = (Persistable) ((KeyedEvent) event).getEventTarget();
 			String typeName = Util.getPerType(target);
-			System.out.println("-----------sout-------------当前操作是维护url");
-			if (Util.innerNameList.contains(typeName)) {
+			System.out.println("-----------当前操作是维护url-------------");
+			HashSet<String> innerNameList = Util.getInnerNameList();
+			if (innerNameList.contains(typeName)) {
 				WTPart ref = (WTPart) target;
-				Util.maintainRefUrl(ref);
+				String ErrorMsg = Util.maintainRefUrl(ref);
+				if (ErrorMsg.length() > 0) {
+					throw new WTException(ErrorMsg);
+				}
 			}
 		}
 	}

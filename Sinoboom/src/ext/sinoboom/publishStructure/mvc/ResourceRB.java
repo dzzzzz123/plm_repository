@@ -15,4 +15,8 @@ public class ResourceRB extends WTListResourceBundle {
 	public static final String Ref_ReName_DESCRIPTION = "publishStructure.refReNameWizard.description";
 	@RBEntry("refReName")
 	public static final String Ref_ReName_TOOLTIP = "publishStructure.refReNameWizard.tooltip";
+	@RBEntry("maintainUrlManually")
+	public static final String Maintain_Url_Manually_DESCRIPTION = "publishStructure.maintainUrlManually.description";
+	@RBEntry("maintainUrlManually")
+	public static final String Maintain_Url_Manually_TOOLTIP = "publishStructure.maintainUrlManually.tooltip";
 }

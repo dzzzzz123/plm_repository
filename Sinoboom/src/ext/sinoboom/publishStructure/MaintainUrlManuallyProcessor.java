@@ -1,5 +1,6 @@
 package ext.sinoboom.publishStructure;
 
+import java.util.HashSet;
 import java.util.List;
 
 import com.ptc.core.components.beans.ObjectBean;
@@ -16,36 +17,46 @@ import wt.pom.Transaction;
 import wt.session.SessionHelper;
 import wt.util.WTException;
 
-public class CollectContentRefProcessor extends DefaultObjectFormProcessor {
+public class MaintainUrlManuallyProcessor extends DefaultObjectFormProcessor {
 
 	@Override
 	public FormResult doOperation(NmCommandBean nmCommandBean, List<ObjectBean> paramList) throws WTException {
 		Transaction t = new Transaction();
-		String errorMsg = "";
+		String ErrorMsg = "";
 		try {
 			t.start();
 			NmOid primaryOid2 = nmCommandBean.getPrimaryOid();
 			Object content = primaryOid2.getRef();
+			HashSet<String> innerNameList = Util.getInnerNameList();
 			if (content instanceof WTPart) {
 				WTPart part = (WTPart) content;
-				Util.collectContentCarriers(part);
+				String typeName = Util.getPerType(part);
+				if (innerNameList.contains(typeName)) {
+					ErrorMsg = Util.maintainRefUrl(part);
+					if (ErrorMsg.length() > 0) {
+						throw new Exception(ErrorMsg);
+					}
+				} else {
+					ErrorMsg = "只能更新部件列表载体，内容载体，发布部分，发布结构，文字内容载体这些部件类型的Url链接";
+					throw new Exception(ErrorMsg);
+				}
 			} else {
-				errorMsg = "只能在发布结构下收集载体";
-				throw new WTException();
+				ErrorMsg = "只能更新部件的Url链接";
+				throw new Exception(ErrorMsg);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			FormResult result = new FormResult(FormProcessingStatus.FAILURE);
 			result.addFeedbackMessage(new FeedbackMessage(FeedbackType.FAILURE, SessionHelper.getLocale(), null, null,
-					new String[] { "收集载体失败，" + errorMsg }));
+					"更新Url链接失败，" + e.getMessage()));
 			t.rollback();
 			return result;
 		} finally {
 			t.commit();
 		}
 		FormResult result = new FormResult(FormProcessingStatus.SUCCESS);
-		result.addFeedbackMessage(new FeedbackMessage(FeedbackType.SUCCESS, SessionHelper.getLocale(), null, null,
-				new String[] { "收集载体成功！" }));
+		result.addFeedbackMessage(
+				new FeedbackMessage(FeedbackType.SUCCESS, SessionHelper.getLocale(), null, null, "更新Url链接成功！"));
 		return result;
 	}
 }

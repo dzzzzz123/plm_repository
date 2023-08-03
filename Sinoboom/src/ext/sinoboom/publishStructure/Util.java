@@ -1,6 +1,7 @@
 package ext.sinoboom.publishStructure;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.regex.Matcher;
@@ -41,41 +42,15 @@ public class Util {
 	public static String partAuthoringLanguageEng = "windchill.authoring.language.eng";
 	public static String partAuthoringLanguageJap = "windchill.authoring.language.jap";
 
-	public static final String partAuthoringLanguageEngValue = PropertiesHelper
-			.getStrFromProperties(partAuthoringLanguageEng);
-	public static final String partAuthoringLanguageJapValue = PropertiesHelper
-			.getStrFromProperties(partAuthoringLanguageJap);
-
 	public static String partListRefInnerName = "windchill.partList.ref";
 	public static String contentRefInnerName = "windchill.content.ref";
 	public static String psSectionInnerName = "windchill.PsSection.ref";
 	public static String psRootInnerName = "windchill.PsRoot.ref";
 	public static String textualContentInnerName = "windchill.TextualContent.Ref";
 
-	public static final String partListRefInnerNameValue = PropertiesHelper.getStrFromProperties(partListRefInnerName);
-	public static final String contentRefInnerNameValue = PropertiesHelper.getStrFromProperties(contentRefInnerName);
-	public static final String psSectionInnerNameValue = PropertiesHelper.getStrFromProperties(psSectionInnerName);
-	public static final String psRootInnerNameValue = PropertiesHelper.getStrFromProperties(psRootInnerName);
-	public static final String TextualContentInnerNameValue = PropertiesHelper
-			.getStrFromProperties(textualContentInnerName);
-
-	public static HashSet<String> innerNameList = new HashSet<>();
-
-	static {
-		innerNameList.add(partListRefInnerNameValue);
-		innerNameList.add(contentRefInnerNameValue);
-		innerNameList.add(psSectionInnerNameValue);
-		innerNameList.add(psRootInnerNameValue);
-		innerNameList.add(TextualContentInnerNameValue);
-	}
-
 	public static String IBATranSou = "iba.trans.source";
 	public static String IBATranEng = "iba.trans.english";
 	public static String IBATranJap = "iba.trans.japan";
-
-	public static final String IBATranSourceValue = PropertiesHelper.getStrFromProperties(IBATranSou);
-	public static final String IBATranEngValue = PropertiesHelper.getStrFromProperties(IBATranEng);
-	public static final String IBATranJapValue = PropertiesHelper.getStrFromProperties(IBATranJap);
 
 	/**
 	 * 英文发布结构收集发布结构的总方法
@@ -84,6 +59,7 @@ public class Util {
 	 * @throws WTException
 	 */
 	public static void collectContentCarriers(WTPart part) throws WTException {
+		String partAuthoringLanguageEngValue = PropertiesHelper.getStrFromProperties(partAuthoringLanguageEng);
 		System.out.println("-------------开始收集内容载体-------------------------");
 		// 判断部件的创作语言与部件的子类型
 		String typeInnerName = PropertiesHelper.getStrFromProperties(partListRefInnerName);
@@ -158,7 +134,12 @@ public class Util {
 	 * 
 	 * @param ref
 	 */
-	public static void maintainRefUrl(WTPart ref) {
+	public static String maintainRefUrl(WTPart ref) {
+		String IBATranSourceValue = PropertiesHelper.getStrFromProperties(IBATranSou);
+		String IBATranEngValue = PropertiesHelper.getStrFromProperties(IBATranEng);
+		String IBATranJapValue = PropertiesHelper.getStrFromProperties(IBATranJap);
+		String partAuthoringLanguageEngValue = PropertiesHelper.getStrFromProperties(partAuthoringLanguageEng);
+		String partAuthoringLanguageJapValue = PropertiesHelper.getStrFromProperties(partAuthoringLanguageJap);
 		try {
 			String name = ref.getName();
 			IBAUtil partIba = new IBAUtil(ref);
@@ -166,13 +147,13 @@ public class Util {
 			if (source.length() > 0) {
 				String authorLang = ref.getAuthoringLanguage();
 				WTPart wtPartToChange = getPartFromURL(source);
+				if (wtPartToChange == null)
+					return ref.getName() + "Url链接存在问题，请更新其他语言的载体";
 				wtPartToChange = (WTPart) PartUtil.getLatestPersistableByNumber(wtPartToChange.getNumber(),
 						WTPart.class);
 				WTPart wtPartToSet = (WTPart) PartUtil.getLatestPersistableByNumber(ref.getNumber(), WTPart.class);
 				String url = WorkflowUtil.getPersUrl(wtPartToSet);
 				if (authorLang.equals(partAuthoringLanguageEngValue)) {
-					System.out.println("-------------ref.getName--------------" + ref.getName());
-					System.out.println("-------------ref.getName--------------" + ref.getViewName());
 					IBAUtil.newIBAURLAttribute(wtPartToChange, IBATranEngValue, url, name);
 				} else if (authorLang.equals(partAuthoringLanguageJapValue)) {
 					IBAUtil.newIBAURLAttribute(wtPartToChange, IBATranJapValue, url, name);
@@ -180,7 +161,6 @@ public class Util {
 					System.out.println("------------authoringLanguage not found---------------");
 				}
 			} else {
-				System.out.println("---------------source is blank------------------");
 				String urlToWTPartEng = partIba.getIBAValue(IBATranEngValue);
 				String urlToWTPartJap = partIba.getIBAValue(IBATranJapValue);
 				WTPart wtPartToChange = null;
@@ -188,10 +168,9 @@ public class Util {
 					wtPartToChange = getPartFromURL(urlToWTPartEng);
 				} else if (urlToWTPartJap.length() > 0) {
 					wtPartToChange = getPartFromURL(urlToWTPartJap);
-				} else {
-					System.out.println("------------authoringLanguage not found----------------");
-					return;
 				}
+				if (wtPartToChange == null)
+					return ref.getName() + "Url链接存在问题，请更新其他语言的载体";
 				wtPartToChange = (WTPart) PartUtil.getLatestPersistableByNumber(wtPartToChange.getNumber(),
 						WTPart.class);
 				WTPart wtPartToSet = (WTPart) PartUtil.getLatestPersistableByNumber(ref.getNumber(), WTPart.class);
@@ -199,53 +178,36 @@ public class Util {
 				IBAUtil.newIBAURLAttribute(wtPartToChange, IBATranSourceValue, url, name);
 			}
 		} catch (WTException e) {
-			System.out.println("-------------maintainRefUrl has filed------------------");
 			e.printStackTrace();
 		}
+		return "";
 	}
 
-	/**
-	 * 根据部件列表载体维持部件列表的状态同步
-	 * 
-	 * @param ref
-	 */
-	public static void alterPartListByRef(WTPart ref) {
-		Long id = PersistenceHelper.getObjectIdentifier(ref).getId();
-		LifeCycleState state = ref.getState();
-		try {
-			ArrayList<PartToPartListLink> partToPartListLinks = getPartListLinkListByNumber(id);
-			for (PartToPartListLink partToPartListLink : partToPartListLinks) {
-				PartList partList = (PartList) partToPartListLink.getRoleBObject();
-				partList.setState(state);
-			}
-		} catch (WTException e) {
-			System.out.println("-----------sout-------------alterPartListByRef方法出现了问题11！！！");
-			e.printStackTrace();
-		} catch (WTPropertyVetoException e) {
-			System.out.println("-----------sout-------------alterPartListByRef方法出现了问题22！！！");
-			e.printStackTrace();
-		}
-		System.out.println("-----------sout-------------完成了alterPartListByRef方法");
-	}
-
-	public static void alterRefByPartList(PartList partList) {
-		System.out.println("-----------sout-------------进入了alterRefByPartList方法");
-		LifeCycleState state = partList.getState();
+	public static void alterRefByPartList(PartList partList, LifeCycleState currentState) {
+		System.out.println("-----------alterRefByPartList-------------");
 		Long id = PersistenceHelper.getObjectIdentifier(partList).getId();
 		try {
 			ArrayList<PartToPartListLink> partToPartListLinks = getPartListLinkListByPartListNumber(id);
 			for (PartToPartListLink partToPartListLink : partToPartListLinks) {
 				WTPart part = (WTPart) partToPartListLink.getRoleAObject();
-				part.setState(state);
+				Long ida2a2 = PersistenceHelper.getObjectIdentifier(part).getId();
+				String updateQuery = "UPDATE WTPART SET STATESTATE = ? WHERE IDA2A2 = ?";
+				WTConnection connection = CommUtil.getWTConnection();
+				PreparedStatement statement = connection.prepareStatement(updateQuery);
+				statement.setString(1, currentState.toString());
+				statement.setString(2, String.valueOf(ida2a2));
+				int i = statement.executeUpdate();
+				System.out.println("修改的条数为：" + i);
 			}
 		} catch (WTException e) {
-			System.out.println("-----------sout-------------alterRefByPartList方法出现了问题11！！！");
 			e.printStackTrace();
 		} catch (WTPropertyVetoException e) {
-			System.out.println("-----------sout-------------alterRefByPartList方法出现了问题22！！！");
+			e.printStackTrace();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.println("-----------sout-------------完成了alterPartListByRef方法");
 	}
 
 	/**
@@ -253,13 +215,23 @@ public class Util {
 	 * 
 	 * @param ref
 	 */
-	public static void alterRefByRefUrl(WTPart ref) {
+	public static void alterRefByRefUrl(WTPart ref, LifeCycleState currentState) {
+		System.out.println("-----------alterRefByRefUrl-------------");
 		try {
-			LifeCycleState state = ref.getState();
 			WTPart wtPartToChange = getLinkedRefByPart(ref);
-			wtPartToChange.setState(state);
+			Long ida2a2 = PersistenceHelper.getObjectIdentifier(wtPartToChange).getId();
+			String updateQuery = "UPDATE PARTLIST SET STATESTATE = ? WHERE IDA2A2 = ?";
+			WTConnection connection = CommUtil.getWTConnection();
+			PreparedStatement statement = connection.prepareStatement(updateQuery);
+			statement.setString(1, currentState.toString());
+			statement.setString(2, String.valueOf(ida2a2));
+			int i = statement.executeUpdate();
+			System.out.println("修改的条数为：" + i);
 		} catch (WTPropertyVetoException e) {
-			System.out.println("-----------------alterRefByRefUrl ref filed22---------------------");
+			e.printStackTrace();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -370,9 +342,7 @@ public class Util {
 	private static WTPart getPartFromURL(String url) {
 		try {
 			String oid = extractIdFromURL(url);
-			System.out.println("---------oid-------" + oid);
 			WTPart part = (WTPart) CommonUtil.getObjByOR(WTPart.class, oid);
-			System.out.println("---------part-------" + part);
 			return part;
 		} catch (Exception e) {
 			System.out.println("系统未找到url指定的部件");
@@ -458,6 +428,9 @@ public class Util {
 	 * @return
 	 */
 	public static WTPart getLinkedRefByPart(WTPart ref) {
+		String IBATranSourceValue = PropertiesHelper.getStrFromProperties(IBATranSou);
+		String IBATranEngValue = PropertiesHelper.getStrFromProperties(IBATranEng);
+		String IBATranJapValue = PropertiesHelper.getStrFromProperties(IBATranJap);
 		WTPart wtPart = null;
 		IBAUtil partIba;
 		try {
@@ -486,10 +459,8 @@ public class Util {
 			partMasteridentity.setName(newName);
 			partMaster = (WTPartMaster) IdentityHelper.service.changeIdentity(partMaster, partMasteridentity);
 		} catch (WTException e) {
-			System.out.println("------changeWtPartName出现了问题------");
 			e.printStackTrace();
 		} catch (WTPropertyVetoException e) {
-			System.out.println("------changeWtPartName出现了问题------");
 			e.printStackTrace();
 		}
 	}
@@ -514,10 +485,8 @@ public class Util {
 			partListMaster = (PartListMaster) IdentityHelper.service.changeIdentity(partListMaster,
 					partListMasteridentity);
 		} catch (WTException e) {
-			System.out.println("------changePartListName出现了问题------");
 			e.printStackTrace();
 		} catch (WTPropertyVetoException e) {
-			System.out.println("------changePartListName出现了问题------");
 			e.printStackTrace();
 		}
 	}
@@ -532,4 +501,15 @@ public class Util {
 		statement.setString(2, String.valueOf(ida2a2));
 		return statement.executeUpdate();
 	}
+
+	public static HashSet<String> getInnerNameList() {
+		HashSet<String> innerNameList = new HashSet<>();
+		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.partListRefInnerName));
+		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.contentRefInnerName));
+		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.psSectionInnerName));
+		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.psRootInnerName));
+		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.textualContentInnerName));
+		return innerNameList;
+	}
+
 }

@@ -15,4 +15,8 @@ public class ResourceRB_zh_CN extends WTListResourceBundle {
 	public static final String Ref_ReName_DESCRIPTION = "publishStructure.refReNameWizard.description";
 	@RBEntry("部件载体重命名")
 	public static final String Ref_ReName_TOOLTIP = "publishStructure.refReNameWizard.tooltip";
+	@RBEntry("更新Url链接")
+	public static final String Maintain_Url_Manually_DESCRIPTION = "publishStructure.maintainUrlManually.description";
+	@RBEntry("更新Url链接")
+	public static final String Maintain_Url_Manually_TOOLTIP = "publishStructure.maintainUrlManually.tooltip";
 }

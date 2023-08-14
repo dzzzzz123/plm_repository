@@ -1,19 +1,24 @@
 package ext.sinoboom.workFlowVerify;
 
+import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import ext.ait.util.IBAUtil;
+import ext.bht.tool.CommUtil;
 import wt.change2.WTChangeActivity2;
+import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
 import wt.fc.WTObject;
 import wt.maturity.MaturityHelper;
 import wt.maturity.PromotionNotice;
-import wt.part.Source;
 import wt.part.WTPart;
 import wt.part.WTPartHelper;
 import wt.part.WTPartMaster;
+import wt.pom.WTConnection;
 import wt.util.WTException;
+import wt.util.WTPropertyVetoException;
 
 public class PartSourceSet {
 
@@ -22,11 +27,12 @@ public class PartSourceSet {
 
 	/**
 	 * 工作流中需要调用的方法
+	 * ext.sinoboom.workFlowVerify.PartSourceSet.SetPartSource(primaryBusinessObject);
 	 * 
 	 * @param pbo
-	 * @throws WTException
+	 * @throws Exception
 	 */
-	public static void SetPartSource(WTObject pbo) throws WTException {
+	public static void SetPartSource(WTObject pbo) throws Exception {
 		WTPart part = null;
 		if (pbo instanceof PromotionNotice) {
 			PromotionNotice pn = (PromotionNotice) pbo;
@@ -36,6 +42,8 @@ public class PartSourceSet {
 				Object obj = qr.nextElement();
 				if (obj instanceof WTPart) {
 					part = (WTPart) obj;
+					System.out.println("<----PromotionNotice.WTPart--->" + part);
+					changeSourceChildPart(part, setWtPartSource(part));
 				}
 			}
 		} else if (pbo instanceof WTChangeActivity2) {
@@ -46,13 +54,11 @@ public class PartSourceSet {
 					Object localObject = changeables.nextElement();
 					if (localObject instanceof WTPart) {
 						part = (WTPart) localObject;
+						System.out.println("<----WTChangeActivity2.WTPart--->" + part);
+						changeSourceChildPart(part, setWtPartSource(part));
 					}
 				}
 			}
-		}
-
-		if (part != null && setWtPartSource(part)) {
-			part.setSource(Source.BUY);
 		}
 	}
 
@@ -62,7 +68,8 @@ public class PartSourceSet {
 	 * @param part
 	 */
 	public static boolean setWtPartSource(WTPart part) {
-		if (!VALID_PART_NUMBERS.contains(part.getNumber())) {
+		String startNumber = part.getNumber().substring(0, 1);
+		if (!VALID_PART_NUMBERS.contains(startNumber)) {
 			return false;
 		}
 		return checkSuperPartsSource(part, 3);
@@ -80,6 +87,11 @@ public class PartSourceSet {
 		}
 
 		List<WTPart> superParts = getSuperWTPartsFromPart(part);
+
+		if (superParts.isEmpty()) {
+			return false;
+		}
+
 		return superParts.parallelStream().anyMatch(PartSourceSet::checkWtPartsSource)
 				|| superParts.parallelStream().anyMatch(superPart -> checkSuperPartsSource(superPart, maxDepth - 1));
 	}
@@ -116,5 +128,29 @@ public class PartSourceSet {
 	private static boolean checkWtPartsSource(WTPart part) {
 		String source = part.getSource().toString();
 		return source.equals(EXTERNAL_SOURCE);
+	}
+
+	private static void changeSourceChildPart(WTPart part, boolean flag) {
+		try {
+			IBAUtil ibaPart = new IBAUtil(part);
+			if (flag) {
+				ibaPart.setIBAValue("SourceChildPart", "是");
+			} else {
+				ibaPart.setIBAValue("SourceChildPart", "否");
+			}
+		} catch (WTException e) {
+			e.printStackTrace();
+		} catch (WTPropertyVetoException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static int changeSourceBySql(WTPart wtpart) throws Exception {
+		Long ida2a2 = PersistenceHelper.getObjectIdentifier(wtpart).getId();
+		String updateQuery = "UPDATE WTPART SET SOURCE = 'buy' WHERE IDA2A2 = ?";
+		WTConnection connection = CommUtil.getWTConnection();
+		PreparedStatement statement = connection.prepareStatement(updateQuery);
+		statement.setString(1, String.valueOf(ida2a2));
+		return statement.executeUpdate();
 	}
 }

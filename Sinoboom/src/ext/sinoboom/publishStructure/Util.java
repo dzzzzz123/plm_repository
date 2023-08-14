@@ -183,6 +183,12 @@ public class Util {
 		return "";
 	}
 
+	/**
+	 * 修改
+	 * 
+	 * @param partList
+	 * @param currentState
+	 */
 	public static void alterRefByPartList(PartList partList, LifeCycleState currentState) {
 		System.out.println("-----------alterRefByPartList-------------");
 		Long id = PersistenceHelper.getObjectIdentifier(partList).getId();
@@ -219,6 +225,8 @@ public class Util {
 		System.out.println("-----------alterRefByRefUrl-------------");
 		try {
 			WTPart wtPartToChange = getLinkedRefByPart(ref);
+			if (wtPartToChange == null)
+				return;
 			Long ida2a2 = PersistenceHelper.getObjectIdentifier(wtPartToChange).getId();
 			String updateQuery = "UPDATE PARTLIST SET STATESTATE = ? WHERE IDA2A2 = ?";
 			WTConnection connection = CommUtil.getWTConnection();
@@ -511,5 +519,4 @@ public class Util {
 		innerNameList.add(PropertiesHelper.getStrFromProperties(Util.textualContentInnerName));
 		return innerNameList;
 	}
-
 }

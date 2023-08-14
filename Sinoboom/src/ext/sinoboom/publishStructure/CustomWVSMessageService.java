@@ -1,6 +1,7 @@
 package ext.sinoboom.publishStructure;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import com.ptc.arbortext.windchill.partlist.PartList;
@@ -70,16 +71,18 @@ public class CustomWVSMessageService extends StandardManager implements WVSMessa
 				while (objsIt.hasNext()) {
 					Persistable p = (Persistable) objsIt.next();
 					LifeCycleState currentState = ((LifeCycleManaged) p).getState();
-					System.out.println("The current lifecycle is  " + currentState.toString());
-					System.out.println("Persistable:" + p);
-					if (p instanceof WTPart) {
-						WTPart ref = (WTPart) p;
-						Util.alterRefByRefUrl(ref, currentState);
-						break;
-					} else if (p instanceof PartList) {
-						PartList partList = (PartList) p;
-						Util.alterRefByPartList(partList, currentState);
-						break;
+					String typeName = Util.getPerType(p);
+					HashSet<String> innerNameList = Util.getInnerNameList();
+					if (innerNameList.contains(typeName)) {
+						if (p instanceof WTPart) {
+							WTPart ref = (WTPart) p;
+							Util.alterRefByRefUrl(ref, currentState);
+							break;
+						} else if (p instanceof PartList) {
+							PartList partList = (PartList) p;
+							Util.alterRefByPartList(partList, currentState);
+							break;
+						}
 					}
 				}
 			} else {

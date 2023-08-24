@@ -68,6 +68,7 @@ public class PartSourceSet {
 	 * @param part
 	 */
 	public static boolean setWtPartSource(WTPart part) {
+		System.out.println("<----setWtPartSource--->" + part);
 		String startNumber = part.getNumber().substring(0, 1);
 		if (!VALID_PART_NUMBERS.contains(startNumber)) {
 			return false;
@@ -82,6 +83,7 @@ public class PartSourceSet {
 	 * @return
 	 */
 	private static boolean checkSuperPartsSource(WTPart part, int maxDepth) {
+		System.out.println("<----checkSuperPartsSource--->" + part);
 		if (maxDepth <= 0) {
 			return false;
 		}
@@ -103,6 +105,7 @@ public class PartSourceSet {
 	 * @return
 	 */
 	private static List<WTPart> getSuperWTPartsFromPart(WTPart part) {
+		System.out.println("<----getSuperWTPartsFromPart--->" + part);
 		List<WTPart> superParts = new ArrayList<>();
 		WTPartMaster master = part.getMaster();
 		try {
@@ -126,11 +129,13 @@ public class PartSourceSet {
 	 * @return
 	 */
 	private static boolean checkWtPartsSource(WTPart part) {
+		System.out.println("<----checkWtPartsSource--->" + part);
 		String source = part.getSource().toString();
 		return source.equals(EXTERNAL_SOURCE);
 	}
 
 	private static void changeSourceChildPart(WTPart part, boolean flag) {
+		System.out.println("<----changeSourceChildPart--->" + part);
 		try {
 			IBAUtil ibaPart = new IBAUtil(part);
 			if (flag) {

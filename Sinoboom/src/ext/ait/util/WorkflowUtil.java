@@ -86,50 +86,6 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 获取升级流程中被评审的所有部件
-	 * 
-	 * @param pn
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<WTPart> getTargerPartByPromotionNotices(PromotionNotice pn) throws WTException {
-		ArrayList<WTPart> list = new ArrayList<WTPart>();
-		// LOGGER.debug("#### pn name --->"+pn.getName());
-		QueryResult qr = MaturityHelper.service.getPromotionTargets(pn, false);
-		while (qr.hasMoreElements()) {
-			PromotionTarget pt = (PromotionTarget) qr.nextElement();
-			Promotable ptObj = pt.getPromotable();
-			if (ptObj instanceof WTPart) {
-				WTPart part = (WTPart) ptObj;
-				// LOGGER.debug("#### part name --->"+part.getNumber());
-				list.add(part);
-			}
-		}
-		return list;
-	}
-
-	/**
-	 * 获取升级流程中被评审的文档
-	 * 
-	 * @param pn
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<WTDocument> getDocByPromotionNotices(PromotionNotice pn) throws WTException {
-		ArrayList<WTDocument> list = new ArrayList<WTDocument>();
-		// LOGGER.debug("#### pn name --->"+pn.getName());
-		QueryResult qr = MaturityHelper.service.getPromotionTargets(pn, false);
-		while (qr.hasMoreElements()) {
-			PromotionTarget pt = (PromotionTarget) qr.nextElement();
-			Promotable ptObj = pt.getPromotable();
-			if (ptObj instanceof WTDocument) {
-				list.add((WTDocument) ptObj);
-			}
-		}
-		return list;
-	}
-
-	/**
 	 * 通过流程模板中的Self变量，获取流程实例
 	 * 
 	 * @param self
@@ -181,31 +137,6 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 保存流程变量
-	 * 
-	 * @param self
-	 * @param key
-	 * @param value
-	 * @throws WTException
-	 */
-	public static void setProcessValue(ObjectReference self, String key, Object value) throws WTException {
-		try {
-			WfProcess process = getProcess(self);
-			WfExecutionObject wfObject = (WfExecutionObject) PersistenceHelper.manager.refresh(process);
-			ProcessData data = wfObject.getContext();
-			// LOGGER.debug("属性["+key+"]原来的值为-->"+data.getValue(key));
-			data.setValue(key, value);
-			PersistenceHelper.manager.modify(wfObject);
-			PersistenceHelper.manager.refresh(wfObject);
-		} catch (Exception e) {
-			LOGGER.error("设置流程变量" + key + "出错");
-			e.printStackTrace();
-			throw new WTException(e);
-		}
-
-	}
-
-	/**
 	 * 通过被评审对象获取流程对象
 	 * 
 	 * @param obj
@@ -254,6 +185,29 @@ public class WorkflowUtil {
 			e.printStackTrace();
 		}
 		return process;
+	}
+
+	/**
+	 * 保存流程变量
+	 * 
+	 * @param self
+	 * @param key
+	 * @param value
+	 * @throws WTException
+	 */
+	public static void setProcessValue(ObjectReference self, String key, Object value) throws WTException {
+		try {
+			WfProcess process = getProcess(self);
+			WfExecutionObject wfObject = (WfExecutionObject) PersistenceHelper.manager.refresh(process);
+			ProcessData data = wfObject.getContext();
+			data.setValue(key, value);
+			PersistenceHelper.manager.modify(wfObject);
+			PersistenceHelper.manager.refresh(wfObject);
+		} catch (Exception e) {
+			LOGGER.error("设置流程变量" + key + "出错");
+			e.printStackTrace();
+			throw new WTException(e);
+		}
 	}
 
 	/**

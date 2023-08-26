@@ -123,24 +123,6 @@ public class PartUtil {
 	}
 
 	/**
-	 * @param part 部件对象 查找part的引用关系
-	 * @return QueryResult
-	 * @throws WTException
-	 */
-	@SuppressWarnings("deprecation")
-	public static QueryResult findWTPartUsageLinkBom(WTPart part) throws WTException {
-		QueryResult rfdm1 = new QueryResult();
-		if (part != null) {
-			QuerySpec queryspec = new QuerySpec(WTPartUsageLink.class);
-			queryspec.appendWhere(new SearchCondition(WTPartUsageLink.class, "roleAObjectRef.key", "=",
-					PersistenceHelper.getObjectIdentifier(part)));
-			queryspec.appendOrderBy(WTPartUsageLink.class, "thePersistInfo.theObjectIdentifier.id", false);
-			rfdm1 = PersistenceHelper.manager.find((StatementSpec) queryspec);
-		}
-		return rfdm1;
-	}
-
-	/**
 	 * 取得所有子部件的关联
 	 * 
 	 * @param parentPart
@@ -228,27 +210,6 @@ public class PartUtil {
 			e.printStackTrace();
 		}
 		return list;
-	}
-
-	/**
-	 * 更改part状态
-	 */
-	public static void setPartSate(List partList, String state) {
-		try {
-			for (int i = 0; i < partList.size(); i++) {
-				WTPart wtpart = (WTPart) partList.get(i);
-				wt.session.SessionHelper.manager.setAdministrator();
-				wtpart = (WTPart) LifeCycleHelper.service.setLifeCycleState((wt.lifecycle.LifeCycleManaged) wtpart,
-						State.toState(state));
-				PersistenceHelper.manager.refresh(wtpart);
-			}
-		} catch (WTInvalidParameterException e) {
-			e.printStackTrace();
-		} catch (LifeCycleException e) {
-			e.printStackTrace();
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public static String getClassificationFullPath(LWCStructEnumAttTemplate structureEum) {
@@ -415,7 +376,7 @@ public class PartUtil {
 	}
 
 	/**
-	 * 更改部件编号
+	 * 更改部件名称
 	 * 
 	 * @throws WTException
 	 */
@@ -492,34 +453,6 @@ public class PartUtil {
 	 * 查找替代料
 	 * 
 	 * @param useagelink
-	 * @return List<WTPart>
-	 * @throws WTException
-	 */
-	public static List<WTPart> getSubstituteParts(WTPartUsageLink useagelink) throws WTException {
-		if (useagelink == null) {
-			return null;
-		}
-		List<WTPart> list = new ArrayList<WTPart>();
-		long linkid = PersistenceHelper.getObjectIdentifier(useagelink).getId();
-		int[] index = { 0 };
-		QuerySpec qs = new QuerySpec(WTPartSubstituteLink.class);
-		qs.appendWhere(
-				new SearchCondition(WTPartSubstituteLink.class, "roleAObjectRef.key.id", SearchCondition.EQUAL, linkid),
-				index);
-		QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
-		while (qr.hasMoreElements()) {
-			WTPartSubstituteLink sLink = (WTPartSubstituteLink) qr.nextElement();
-			WTPartMaster partmast = sLink.getSubstitutes();
-			WTPart part = getWTPartByNumber(partmast.getNumber());
-			list.add(part);
-		}
-		return list;
-	}
-
-	/**
-	 * 查找替代料
-	 * 
-	 * @param useagelink
 	 * @return List<WTPartSubstituteLink>
 	 * @throws WTException
 	 */
@@ -546,25 +479,32 @@ public class PartUtil {
 	 * 查找替代料
 	 * 
 	 * @param useagelink
+	 * @return List<WTPart>
+	 * @throws WTException
+	 */
+	public static List<WTPart> getSubstituteParts(WTPartUsageLink useagelink) throws WTException {
+		List<WTPart> list = new ArrayList<WTPart>();
+		List<WTPartSubstituteLink> wtPartSubstituteLinks= getSubstitutePartsLink( useagelink);
+		for (WTPartSubstituteLink wtPartSubstituteLink : wtPartSubstituteLinks) {
+			WTPartMaster partmast = wtPartSubstituteLink.getSubstitutes();
+			WTPart part = getWTPartByNumber(partmast.getNumber());
+			list.add(part);
+		}
+		return list;
+	}
+
+	/**
+	 * 查找替代料
+	 * 
+	 * @param useagelink
 	 * @return String
 	 * @throws WTException
 	 */
 	public static String getSubstitutePart(WTPartUsageLink useagelink) throws WTException {
-		if (useagelink == null) {
-			return null;
-		}
-		String nums = "";
-		long linkid = PersistenceHelper.getObjectIdentifier(useagelink).getId();
-		int[] index = { 0 };
-		QuerySpec qs = new QuerySpec(WTPartSubstituteLink.class);
-		qs.appendWhere(
-				new SearchCondition(WTPartSubstituteLink.class, "roleAObjectRef.key.id", SearchCondition.EQUAL, linkid),
-				index);
-		QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
-		while (qr.hasMoreElements()) {
-			WTPartSubstituteLink sLink = (WTPartSubstituteLink) qr.nextElement();
-			WTPartMaster part = sLink.getSubstitutes();
-			String s = part.getNumber();
+		StringB nums = "";
+		List<WTPart>  wtParts= getSubstituteParts(useagelink);
+		for (WTPart wtPart : wtParts) {
+				String s = part.getNumber();
 			if (nums == "") {
 				nums = s;
 			} else {
@@ -1094,33 +1034,6 @@ public class PartUtil {
 	}
 
 	/**
-	 * 根据part得到其包含子部件 的所有部件(包括其本身)
-	 * 
-	 * @param WTPart
-	 * @param Set    <WTPart>
-	 * @return Set<WTPart>
-	 */
-	public static Set<WTPart> getHasBomPartsByPart(WTPart productPart, Set<WTPart> set) {
-		WTPart sPart = null;
-		QueryResult qr2 = null;
-		try {
-			QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(productPart);
-			while (qr.hasMoreElements()) {
-				set.add(productPart);
-				WTPartUsageLink usageLink = (WTPartUsageLink) qr.nextElement();
-				qr2 = VersionControlHelper.service.allVersionsOf(usageLink.getUses());
-				if (qr2.hasMoreElements()) {
-					sPart = (WTPart) qr2.nextElement();
-					getHasBomPartsByPart(sPart, set);
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return set;
-	}
-
-	/**
 	 * @param WTPart fatherPart 根据父部件获取 link
 	 * @return WTPart
 	 * @throws Exception
@@ -1174,27 +1087,35 @@ public class PartUtil {
 		return list;
 	}
 
+
 	/**
 	 * 根据part得到其所有子部件
+	 *
+	 * @param part
+	 * @return
 	 */
-	public static List<WTPart> getAllBomByPart(WTPart ProductPart, List<WTPart> list) {
+	private static List<WTPart> getAllBomByPart(WTPart part) {
+		List<WTPart> localList = new ArrayList<>(); // 局部列表用于递归操作的累积结果
+	
 		WTPart sPart = null;
 		QueryResult qr2 = null;
 		try {
-			QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(ProductPart);
+			QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(part);
 			while (qr.hasMoreElements()) {
 				WTPartUsageLink usageLink = (WTPartUsageLink) qr.nextElement();
 				qr2 = VersionControlHelper.service.allVersionsOf(usageLink.getUses());
 				if (qr2.hasMoreElements()) {
 					sPart = (WTPart) qr2.nextElement();
-					list.add(sPart);
-					getAllBomByPart(sPart, list);
+					localList.add(sPart);
+	
+					// 递归调用，将结果合并到局部列表
+					localList.addAll(getAllBomByPartRecursive(sPart));
 				}
 			}
 		} catch (WTException e) {
 			e.printStackTrace();
 		}
-		return list;
+		return localList; // 返回局部列表
 	}
 
 	/**
@@ -1267,33 +1188,6 @@ public class PartUtil {
 	}
 
 	/**
-	 * 得到两个部件之间的链接关系
-	 * 
-	 * @param part      父部件
-	 * @param subMaster 子部件Master
-	 * @return
-	 * @throws WTException
-	 */
-	public static WTPartUsageLink findWTPartUsageLink(WTPart part, WTPartMaster subMaster) throws WTException {
-
-		WTPartUsageLink link = null;
-		if (part == null || subMaster == null) {
-			return link;
-		}
-		QuerySpec queryspec = new QuerySpec(WTPartUsageLink.class);
-		queryspec.appendWhere(new SearchCondition(WTPartUsageLink.class, "roleAObjectRef.key", "=",
-				PersistenceHelper.getObjectIdentifier(part)), new int[] {});
-		queryspec.appendAnd();
-		queryspec.appendWhere(new SearchCondition(WTPartUsageLink.class, "roleBObjectRef.key", "=",
-				PersistenceHelper.getObjectIdentifier(subMaster)), new int[] {});
-		QueryResult qr = PersistenceServerHelper.manager.query(queryspec);
-		if (qr.hasMoreElements()) {
-			link = (WTPartUsageLink) qr.nextElement();
-		}
-		return link;
-	}
-
-	/**
 	 * 根据替代料 获取其主料
 	 * 
 	 * @param part
@@ -1320,23 +1214,6 @@ public class PartUtil {
 				WTPart part2 = (WTPart) qr2.nextElement();
 				list.add(part2);
 			}
-		}
-		return list;
-	}
-
-	/**
-	 * 根据part得到其子部件
-	 */
-	public static List<WTPartUsageLink> getBomLinkByPart(WTPart ProductPart) {
-		List<WTPartUsageLink> list = new ArrayList<WTPartUsageLink>();
-		try {
-			QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(ProductPart);
-			while (qr.hasMoreElements()) {
-				WTPartUsageLink usageLink = (WTPartUsageLink) qr.nextElement();
-				list.add(usageLink);
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
 		}
 		return list;
 	}
@@ -1407,109 +1284,6 @@ public class PartUtil {
 			e.printStackTrace();
 		}
 		return newPart;
-	}
-
-	/**
-	 * 根据编号或者名称查询部件
-	 * 
-	 * @param partNumber
-	 * @return
-	 */
-	public static List<WTPart> findAllWTPartByNumber(String partNumber) {
-		QueryResult qr = null;
-		List<WTPart> list = new ArrayList<WTPart>();
-		try {
-			QuerySpec querySpec = new QuerySpec(WTPart.class);
-
-			/*
-			 * if(!"".equals(partName) && partName != null){ WhereExpression where = new
-			 * SearchCondition(WTPart.class, WTPart.NAME, SearchCondition.EQUAL, partName);
-			 * querySpec.appendWhere(where); }
-			 */
-			if (StringUtils.isNotBlank(partNumber)) {
-				WhereExpression where = new SearchCondition(WTPart.class, WTPart.NUMBER, SearchCondition.EQUAL,
-						partNumber);
-				querySpec.appendWhere(where);
-				qr = PersistenceHelper.manager.find((StatementSpec) querySpec);
-				while (qr.hasMoreElements()) {
-					WTPart part = (WTPart) qr.nextElement();
-					list.add(part);
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return list;
-	}
-
-	public static Map getQuantityAmount(WTPart part) {
-		Map<String, String> mapData = new HashMap<>();
-		try {
-			Map<String, WTPart> map = new IdentityHashMap<String, WTPart>();
-
-			int i = 0;
-			map = PartUtil.getAllBomTableByPart(part, map, i);
-
-			Set set = map.entrySet();
-			Iterator iterator = set.iterator();
-			while (iterator.hasNext()) {
-				Map.Entry entry = (Entry) iterator.next();
-				WTPart part2 = (WTPart) entry.getValue();
-				QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(part2);
-
-				// 遍历每个part，得到子part单位和数量
-				while (qr.hasMoreElements()) {
-					WTPartUsageLink link = (WTPartUsageLink) qr.nextElement();
-
-					WTPartMaster master = (WTPartMaster) link.getAllObjects()[1];
-					String number2 = master.getNumber();
-
-					String tempunit = link.getQuantity().getUnit().toString();
-					String tempquantity = String.valueOf(link.getQuantity().getAmount());
-
-					mapData.put(number2 + "Quantity", tempquantity);
-					mapData.put(number2 + "Amount", tempunit);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return mapData;
-	}
-
-	/**
-	 * 根据part得到其所有子部件
-	 * 
-	 * @param ProductPart
-	 * @param map
-	 * @param i
-	 * @return
-	 */
-	public static Map<String, WTPart> getAllBomTableByPart(WTPart ProductPart, Map<String, WTPart> map, int i) {
-		try {
-			QueryResult qr = findWTPartUsageLink(ProductPart);
-			while (qr.hasMoreElements()) {
-				WTPartUsageLink usageLink = (WTPartUsageLink) qr.nextElement();
-				WTPart subPart = getWTPartByNumber(usageLink.getUses().getNumber());
-				getAllBomTableByPart(subPart, map, i + 1);
-				map.put(i + "", subPart);
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return map;
-	}
-
-	@SuppressWarnings("deprecation")
-	public static QueryResult findWTPartUsageLink(WTPart part) throws WTException {
-		if (part == null)
-			return new QueryResult();
-		QuerySpec queryspec = new QuerySpec(WTPartUsageLink.class);
-		queryspec.appendWhere(new SearchCondition(WTPartUsageLink.class, "roleAObjectRef.key", "=",
-				PersistenceHelper.getObjectIdentifier(part)), new int[] {});
-		queryspec.appendOrderBy(WTPartUsageLink.class, "lineNumber.value", false);
-
-		return PersistenceServerHelper.manager.query(queryspec);
 	}
 
 	/**
@@ -1635,16 +1409,6 @@ public class PartUtil {
 			e.printStackTrace();
 		} catch (WTPropertyVetoException e) {
 			e.printStackTrace();
-		}
-	}
-
-	public static void main(String[] args) {
-		String pa = "PA1.234.567(A)MX";
-		String right = StringUtils.right(pa, 1);
-		while (!StringUtils.isNumeric(right) && !StringUtils.equals(right, ")")) {
-			pa = StringUtils.removeEndIgnoreCase(pa, right);
-			System.out.println(pa);
-			right = StringUtils.right(pa, 1);
 		}
 	}
 }

@@ -92,19 +92,19 @@ import wt.vc.wip.WorkInProgressHelper;
 import wt.vc.wip.Workable;
 
 public class CommonUtil {
-	/**
-	 * 转换中文格式，避免中文乱码
-	 * 
-	 * @param value
-	 * @return
-	 * @throws WTException
-	 */
+
 	private static ReferenceFactory factory = new ReferenceFactory();
 
 	private static Logger LOGGER = LogR.getLogger(CommonUtil.class.getName());
 
 	private static EPMDocumentType CADDRAWING = EPMDocumentType.toEPMDocumentType("CADDRAWING"); //
 
+	/**
+	 * 转换中文格式，避免中文乱码
+	 * @param value
+	 * @return
+	 * @throws WTException
+	 */
 	public static String formatString(String value) throws WTException {
 		try {
 			if (value != null && value.trim().length() > 0) {
@@ -121,12 +121,12 @@ public class CommonUtil {
 	/**
 	 * 获取对象的文件夹路径
 	 * 
-	 * @param doc
+	 * @param obj
 	 * @return
 	 */
-	public static String getPath(RevisionControlled doc) {
+	public static String getPath(RevisionControlled obj) {
 		StringBuffer path = new StringBuffer();
-		SubFolderReference ref = doc.getParentFolder();
+		SubFolderReference ref = obj.getParentFolder();
 		if (ref != null && ref.getObject() instanceof SubFolder) {
 			SubFolder subFolder = (SubFolder) ref.getObject();
 			getPath(path, subFolder);
@@ -284,64 +284,6 @@ public class CommonUtil {
 		return dataList;
 	}
 
-	public static Map<String, String> toMap(String url) {
-		Map<String, String> map = new HashMap<String, String>();
-		if (url != null && url.indexOf("?") > -1 && url.indexOf("=") > -1) {
-			url = url.substring(url.indexOf("?") + 1, url.length());
-			String[] arrTemp = url.split("&");
-			for (String str : arrTemp) {
-				String[] qs = str.split("=");
-				map.put(qs[0], qs[1]);
-			}
-		}
-		return map;
-	}
-
-	/**
-	 * 判断字符串是否在list当中
-	 * 
-	 * @param list
-	 * @param str
-	 * @return
-	 */
-	public static boolean hasInList(ArrayList<String> list, String str) {
-		boolean result = false;
-		if (str == null || str.trim().length() == 0) {
-			return result;
-		}
-		for (String s : list) {
-			if (s != null && s.equals(str)) {
-				result = true;
-				break;
-			}
-		}
-		return result;
-	}
-
-	public static BigDecimal doubleToBigDecimal(double d) {
-		String doubleStr = String.valueOf(d);
-		if (doubleStr.indexOf(".") != -1) {
-			int pointLen = doubleStr.replaceAll("\\d+\\.", "").length(); // 取得小数点后的数字的位数
-			pointLen = pointLen > 16 ? 16 : pointLen; // double最大有效小数点后的位数为16
-			double pow = Math.pow(10, pointLen);
-			long tmp = (long) (d * pow);
-			return new BigDecimal(tmp).divide(new BigDecimal(pow));
-		}
-		return new BigDecimal(d);
-	}
-
-	public static BigDecimal stringToBigDecimal(String doubleStr) {
-		double d = Double.parseDouble(doubleStr);
-		if (doubleStr.indexOf(".") != -1) {
-			int pointLen = doubleStr.replaceAll("\\d+\\.", "").length(); // 取得小数点后的数字的位数
-			pointLen = pointLen > 16 ? 16 : pointLen; // double最大有效小数点后的位数为16
-			double pow = Math.pow(10, pointLen);
-			long tmp = (long) (d * pow);
-			return new BigDecimal(tmp).divide(new BigDecimal(pow));
-		}
-		return new BigDecimal(d);
-	}
-
 	/**
 	 * 获取对象的版本，如A.1
 	 * 
@@ -359,112 +301,6 @@ public class CommonUtil {
 
 	public static WTObject oid2Object(String oid) throws WTException {
 		return (WTObject) factory.getReference(oid).getObject();
-
-	}
-
-	/**
-	 * 只适用于版序为大写字母的版本 当当前版本为A是，返回其本身
-	 * 
-	 * @param version
-	 * @return
-	 */
-	public static String getLastVersion(String version) {
-		int i = Integer.parseInt(version, 36);
-		if (i > 10) {
-			i--;
-			Long l = (long) i;
-			String next = Long.toString(l, 36).toUpperCase();
-			return next;
-		} else {
-			return version;
-		}
-
-	}
-
-	/**
-	 * 根据当前日期返回不同形式的字符串形式。
-	 * 
-	 * @param date Date对象。
-	 * @return 如果与当前时间所在年月日相同，则返回"HH:mm:ss"形式，否则返回"yyyy-MM-dd HH:mm:ss"。
-	 */
-	public static String getCurrentDay2String() {
-		Date d = new Date();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
-		sdf.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		// 时:分:秒:毫秒
-		return sdf.format(d);
-	}
-
-	/**
-	 * 根据当前日期返回不同形式的字符串形式。
-	 * 
-	 * @param date Date对象。
-	 * @return 如果与当前时间所在年月日相同，则返回"HH:mm:ss"形式，否则返回"yyyy-MM-dd HH:mm:ss"。
-	 */
-	public static String getTime2String(Timestamp ts) {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-		sdf.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		// 时:分:秒:毫秒
-		return sdf.format(ts);
-	}
-
-	/**
-	 * 根据当前日期返回不同形式的字符串形式。
-	 * 
-	 * @param date Date对象。
-	 * @return 如果与当前时间所在年月日相同，则返回"HH:mm:ss"形式，否则返回"yyyy-MM-dd HH:mm:ss"。
-	 */
-	public static String getTime2String(Timestamp ts, String formatStr) {
-		SimpleDateFormat sdf = new SimpleDateFormat(formatStr);
-		sdf.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		// 时:分:秒:毫秒
-		return sdf.format(ts);
-	}
-
-	/**
-	 * 获取当前日期
-	 * 
-	 * @return "yyyy-MM-dd"
-	 */
-	public static String getNowTime() {
-		/* 获取当前时间 */
-		DateFormat format1 = new SimpleDateFormat("yyyy-MM-dd");
-		format1.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		return format1.format(new Date());
-
-	}
-
-	public static String getDateKey() {
-		/* 获取当前时间 */
-		DateFormat format1 = new SimpleDateFormat("yyMMdd");
-		format1.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		return format1.format(new Date());
-	}
-
-	public static String getDateString() {
-		/* 获取当前时间 */
-		DateFormat format1 = new SimpleDateFormat("yyyyMMdd");
-		format1.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		return format1.format(new Date());
-	}
-
-	public static String getTimeString() {
-		/* 获取当前时间 */
-		DateFormat format1 = new SimpleDateFormat("yyyyMMddHHmmss");
-		format1.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-		return format1.format(new Date());
-	}
-
-	/**
-	 * 根据当前日期返回不同形式的数字。
-	 * 
-	 * @param date Date对象。
-	 * @return 如果与当前时间所在年月日相同，则返回"HH:mm:ss"形式，否则返回"yyyy-MM-dd HH:mm:ss"。
-	 */
-	public static Integer getTime2Int(Timestamp ts) {
-		int d = ts.getSeconds() + ts.getMinutes() * 60 * +ts.getHours() * 60 * 60 + ts.getDate() * 60 * 60 * 24
-				+ ts.getMonth() * 60 * 60 * 24 * 30 + ts.getYear() * 60 * 60 * 24 * 30 * 12;
-		return d;
 	}
 
 	/**
@@ -524,7 +360,6 @@ public class CommonUtil {
 				localIterated = localIterated1;
 			}
 		}
-		// LOGGER.debug(" the latest iteration=" + localIterated.getIdentity());
 		return localIterated;
 	}
 
@@ -594,18 +429,8 @@ public class CommonUtil {
 			}
 			return user;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			throw new WTException(e);
 		}
-	}
-
-	public static boolean isLetter(char c) {
-		boolean isLetter = false;
-		int asc = (int) c;
-		if (64 < asc && c < 91) {
-			isLetter = true;
-		}
-		return isLetter;
 	}
 
 	/**
@@ -617,32 +442,13 @@ public class CommonUtil {
 	 */
 	public static long getTypeDefinitionIdByName(String name) throws WTException {
 		long id = 0;
-		QuerySpec qs = new QuerySpec();
-		int typeDefine = qs.appendClassList(WTTypeDefinition.class, true);
-		int typeDefineMaster = qs.appendClassList(WTTypeDefinitionMaster.class, false);
-		qs.setAdvancedQueryEnabled(true);
-		SearchCondition typebyMaster = new SearchCondition(WTTypeDefinition.class, "masterReference.key.id",
-				WTTypeDefinitionMaster.class, "thePersistInfo.theObjectIdentifier.id");
-		qs.appendWhere(typebyMaster, new int[] { typeDefine, typeDefineMaster });
-		qs.appendAnd();
-		SearchCondition typeMasterName = new SearchCondition(WTTypeDefinitionMaster.class, "displayNameKey", "=", name);
-		qs.appendWhere(typeMasterName, typeDefineMaster);
-		QueryResult qr = PersistenceHelper.manager.find(qs);
-		while (qr.hasMoreElements()) {
-			Object[] objs = (Object[]) qr.nextElement();
-			LOGGER.debug("###getTypeDefinitionIdByName### class name --->" + objs[0].getClass().getName());
-			if (objs[0] instanceof WTTypeDefinition) {
-				WTTypeDefinition typeDef = (WTTypeDefinition) objs[0];
-				if (typeDef.isLatestIteration()) {
-					id = typeDef.getPersistInfo().getObjectIdentifier().getId();
-				}
-				LOGGER.debug("###[" + typeDef.getPersistInfo().getObjectIdentifier().getId()
-						+ "] isInheritedDomain --->" + typeDef.isInheritedDomain() + " ;;;isUserAttributeable "
-						+ typeDef.isUserAttributeable() + ";;;; isLatestIteration " + typeDef.isLatestIteration());
-			}
-
+		WTTypeDefinition typeDef = getTypeDefinitionByName(name);
+		if (typeDef.isLatestIteration()) {
+			id = typeDef.getPersistInfo().getObjectIdentifier().getId();
 		}
-		LOGGER.debug("############### getTypeDefinitionIdByName ##### sql --->" + qs.getWhere());
+		LOGGER.debug("###[" + id + "] isInheritedDomain --->" + typeDef.isInheritedDomain() + 
+						" ;;;isUserAttributeable "+ typeDef.isUserAttributeable() + 
+						";;;; isLatestIteration " + typeDef.isLatestIteration());
 		return id;
 	}
 
@@ -675,94 +481,8 @@ public class CommonUtil {
 				}
 
 			}
-
 		}
 		return type;
-	}
-
-	/**
-	 * 获取文档所描述的部件
-	 * 
-	 * @param doc
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<WTPart> getDescriptionParts(WTDocument doc) throws WTException {
-		ArrayList<WTPart> partlist = new ArrayList<WTPart>();
-		try {
-			ArrayList<String> numberlist = new ArrayList<String>();
-			QuerySpec qs = new QuerySpec(WTPartDescribeLink.class);
-			qs.appendWhere(new SearchCondition(WTPartDescribeLink.class, "roleBObjectRef.key.id", SearchCondition.EQUAL,
-					doc.getPersistInfo().getObjectIdentifier().getId()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			while (qr.hasMoreElements()) {
-				WTPartDescribeLink link = (WTPartDescribeLink) qr.nextElement();
-				WTPart part = link.getDescribes();
-				if (numberlist.contains(part.getNumber())) {
-					continue;
-				} else {
-					LOGGER.debug("文档[" + doc.getNumber() + "]描述的部件为--->" + part.getNumber());
-					partlist.add(part);
-					numberlist.add(part.getNumber());
-				}
-
-			}
-		} catch (Exception e) {
-			throw new WTException(e);
-		}
-
-		return partlist;
-	}
-
-	/**
-	 * 获取变更的部件
-	 * 
-	 * @param eca
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<WTPart> getChangeParts(WTChangeActivity2 eca) throws WTException {
-		ArrayList<WTPart> parts = new ArrayList<WTPart>();
-		try {
-			QueryResult aqr = ChangeHelper2.service.getChangeablesAfter(eca);
-			while (aqr.hasMoreElements()) {
-				Object obj = aqr.nextElement();
-				if (obj instanceof WTPart) {
-					WTPart part = (WTPart) obj;
-					parts.add(part);
-				}
-			}
-			return parts;
-		} catch (Exception e) {
-			throw new WTException(e);
-		}
-	}
-
-	/**
-	 * 获取参考文档
-	 * 
-	 * @param doc
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<WTDocument> getDepDoc(WTDocument doc) throws WTException {
-		ArrayList<WTDocument> doclist = new ArrayList<WTDocument>();
-		try {
-			QuerySpec qs = new QuerySpec(WTDocumentDependencyLink.class);
-			qs.appendWhere(new SearchCondition(WTDocumentDependencyLink.class, "roleAObjectRef.key.id",
-					SearchCondition.EQUAL, doc.getPersistInfo().getObjectIdentifier().getId()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			while (qr.hasMoreElements()) {
-				WTDocumentDependencyLink link = (WTDocumentDependencyLink) qr.nextElement();
-				WTDocument depDoc = (WTDocument) link.getRoleBObject();
-				LOGGER.debug("文档[" + doc.getNumber() + "]参考文档为--->" + depDoc.getNumber());
-				doclist.add(depDoc);
-			}
-		} catch (Exception e) {
-			throw new WTException(e);
-		}
-
-		return doclist;
 	}
 
 	/**
@@ -788,30 +508,7 @@ public class CommonUtil {
 		} catch (Exception e) {
 			throw new WTException(e);
 		}
-
 		return doclist;
-	}
-
-	/**
-	 * @description 得到对象的自定义类型的内部名称
-	 * @param obj
-	 * @return String
-	 * @throws WTException
-	 */
-	public static String getTypeName(Typed obj) {
-		String typeDisplayName = null;
-		try {
-			WTTypeDefinition definition = null;
-			Typed type = (Typed) obj;
-			TypeDefinitionReference ref = type.getTypeDefinitionReference();
-			TypeDefinitionDefaultView view = EPMSoftTypeServerUtilities.getTypeDefinition(ref);
-			definition = (WTTypeDefinition) PersistenceHelper.manager.refresh(view.getObjectID());
-			typeDisplayName = definition.getName(); // 类型的显示名称
-//			System.out.println(typeDisplayName+"----------");
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return typeDisplayName;
 	}
 
 	/**
@@ -859,148 +556,6 @@ public class CommonUtil {
 		}
 	}
 
-	public static boolean isCheckout(Workable wa) {
-		boolean checkOut = false;
-		try {
-			checkOut = WorkInProgressHelper.isCheckedOut(wa);
-		} catch (WTException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return checkOut;
-	}
-
-	public static boolean isnew(RevisionControlled revisionControlled) {
-		boolean isnew = false;
-		String bigVersion = revisionControlled.getVersionInfo().getIdentifier().getValue();
-		if (bigVersion != null && bigVersion.trim().length() > 0 && bigVersion.equals("A")) {
-			isnew = true;
-		}
-		return isnew;
-	}
-
-	/**
-	 * 给map数据进行排序
-	 * 
-	 * @param map      : 需排序的数据集
-	 * @param indexKey ： map中需要排序的字段名，如果为空，则已大的Map的Key进行排序
-	 * @return
-	 */
-	public static ArrayList<String> sortPlaceNumber(HashMap<String, HashMap<String, String>> map, String indexKey) {
-		LOGGER.debug("传入需要排序的Map数据有[" + map.size() + "]个");
-		ArrayList<String> keyList = new ArrayList<String>();
-		TreeMap<String, String> tm = new TreeMap<String, String>();
-		if (indexKey != null && indexKey.trim().length() > 0) {
-			Iterator<String> keys = map.keySet().iterator();
-			while (keys.hasNext()) {
-				String key = keys.next();
-				HashMap<String, String> childMap = map.get(key);
-				String indexValue = childMap.get(indexKey);
-				if (indexValue == null || indexValue.trim().length() == 0) {
-					indexValue = "0";
-				}
-				tm.put(indexValue, indexValue);
-			}
-			Iterator<String> its = tm.keySet().iterator();
-			while (its.hasNext()) {
-				String key = its.next();
-				Iterator<String> sKeys = map.keySet().iterator();
-				while (sKeys.hasNext()) {
-					String sKey = sKeys.next();
-					HashMap<String, String> childMap = map.get(sKey);
-					String indexValue = childMap.get(indexKey);
-					if (indexValue == null || indexValue.trim().length() == 0) {
-						indexValue = "0";
-					}
-					if (indexValue.equals(key)) {
-						keyList.add(sKey);
-					}
-				}
-			}
-		} else {
-			Iterator<String> keys = map.keySet().iterator();
-			while (keys.hasNext()) {
-				String key = keys.next();
-				tm.put(key, key);
-			}
-			Iterator<String> its = tm.keySet().iterator();
-			while (its.hasNext()) {
-				String key = its.next();
-				keyList.add(key);
-
-			}
-		}
-		LOGGER.debug("排序后的返回的Map数据有[" + keyList.size() + "]个");
-		return keyList;
-	}
-
-	/**
-	 * Object转成指定的类型
-	 * 
-	 * @param obj
-	 * @param type
-	 * @param <T>
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	public static <T> T convert(Object obj, Class<T> type) {
-		if (obj != null) {
-			if (type.equals(Integer.class) || type.equals(int.class)) {
-				return (T) new Integer(obj.toString());
-			} else if (type.equals(Long.class) || type.equals(long.class)) {
-				return (T) new Long(obj.toString());
-			} else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
-				return (T) new Boolean(obj.toString());
-			} else if (type.equals(Short.class) || type.equals(short.class)) {
-				return (T) new Short(obj.toString());
-			} else if (type.equals(Float.class) || type.equals(float.class)) {
-				return (T) new Float(obj.toString());
-			} else if (type.equals(Double.class) || type.equals(double.class)) {
-				return (T) new Double(obj.toString());
-			} else if (type.equals(Byte.class) || type.equals(byte.class)) {
-				return (T) new Byte(obj.toString());
-			} else if (type.equals(Character.class) || type.equals(char.class)) {
-				return (T) new Character(obj.toString().charAt(0));
-			} else if (type.equals(String.class)) {
-				return (T) obj;
-			} else if (type.equals(BigDecimal.class)) {
-				return (T) new BigDecimal(obj.toString());
-			} else if (type.equals(LocalDateTime.class)) {
-				// DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd
-				// HH:mm:ss");
-				return (T) LocalDateTime.parse(obj.toString());
-			} else if (type.equals(Date.class)) {
-				try {
-					SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-					return (T) formatter.parse(obj.toString());
-				} catch (ParseException e) {
-					throw new RuntimeException(e.getMessage());
-				}
-			} else {
-				return null;
-			}
-		} else {
-			if (type.equals(int.class)) {
-				return (T) new Integer(0);
-			} else if (type.equals(long.class)) {
-				return (T) new Long(0L);
-			} else if (type.equals(boolean.class)) {
-				return (T) new Boolean(false);
-			} else if (type.equals(short.class)) {
-				return (T) new Short("0");
-			} else if (type.equals(float.class)) {
-				return (T) new Float(0.0);
-			} else if (type.equals(double.class)) {
-				return (T) new Double(0.0);
-			} else if (type.equals(byte.class)) {
-				return (T) new Byte("0");
-			} else if (type.equals(char.class)) {
-				return (T) new Character('\u0000');
-			} else {
-				return null;
-			}
-		}
-	}
 
 	public static Folder getFolder(String strFolder, WTContainer wtContainer) throws WTException {
 		WTPrincipal curUser = SessionHelper.manager.getPrincipal();
@@ -1086,25 +641,6 @@ public class CommonUtil {
 
 	}
 
-	public static Object getObjByOR(Class queryClass, String or) {
-		try {
-			if (StringUtils.isBlank(or)) {
-				return null;
-			}
-			QuerySpec qs = new QuerySpec(queryClass);
-			qs.appendWhere(new SearchCondition(queryClass, "thePersistInfo.theObjectIdentifier.id",
-					SearchCondition.EQUAL, Long.valueOf(or)));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			qr = new LatestConfigSpec().process(qr);
-			if (qr.hasMoreElements()) {
-				return qr.nextElement();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-
-	}
 
 	public static Object getObjByNumber(String number, Class queryClass) {
 		try {
@@ -1124,33 +660,6 @@ public class CommonUtil {
 		return null;
 	}
 
-	/**
-	 * 获取最新版本的文档
-	 */
-	public static WTPart getPartByNumber(String number) {
-		try {
-			if (StringUtils.isBlank(number)) {
-				return null;
-			}
-			QuerySpec qs = new QuerySpec(WTPart.class);
-			qs.appendWhere(new SearchCondition(WTPart.class, WTPart.NUMBER, SearchCondition.EQUAL, number.trim()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			qr = new LatestConfigSpec().process(qr);
-			if (qr.hasMoreElements()) {
-				WTPart part = (WTPart) qr.nextElement();
-				return part;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	public static String getObjType(Persistence obj) {
-
-		return "";
-
-	}
 
 	/**
 	 * 获取当前组织
@@ -1259,75 +768,24 @@ public class CommonUtil {
 	 * @param cad
 	 * @throws Exception
 	 */
-	public static List<Persistable> get2DDrawingByWTPart(WTPart part, EPMDocumentType eType) throws Exception {
+	public static List<Persistable> get2DDrawingByWTPart(WTPart part) throws Exception {
 		List<Persistable> result = new ArrayList<Persistable>();
-		QueryResult qr = null;
-		EPMDocument doc = null;
 		try {
-			qr = PartDocServiceCommand.getAssociatedCADDocuments(part);// CAD文档
+			QueryResult qr = PartDocServiceCommand.getAssociatedCADDocuments(part);// CAD文档
 			while (qr.hasMoreElements()) {
 				Object obj = qr.nextElement();
 				if (obj instanceof EPMDocument) {
-					doc = (EPMDocument) obj;
+					EPMDocument doc = (EPMDocument) obj;
 					EPMDocumentType docType = doc.getDocType();
-//					EPMAuthoringAppType appType = doc.getAuthoringApplication();
-					// && doc.getNumber().contains(part.getNumber())
 					if (CADDRAWING.equals(docType)) {
-						System.out.println("005-batch download pdf : get2DDrawingByWTPart " + doc.getNumber());
 						result.add(doc);
 					}
 				}
 			}
-
 		} catch (WTException e) {
 			e.printStackTrace();
 			throw e;
 		}
 		return result;
 	}
-
-	/**
-	 * 由于可能不存在cad文档的情况 所以根据wtpart获取说明方文档
-	 *
-	 * @param wtpart
-	 * @throws Exception
-	 */
-	public static List<Persistable> getDescriptedByWTPart(WTPart part) throws Exception {
-		List<Persistable> result = new ArrayList<Persistable>();
-		QueryResult qr = null;
-		WTDocument doc = null;
-		try {
-			qr = WTPartHelper.service.getDescribedByDocuments(part);// 说明方文档
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTDocument) {
-					doc = (WTDocument) obj;
-					result.add(doc);
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw e;
-		}
-		return result;
-	}
-
-	public static ArrayList<EPMDescribeLink> getRelatedObjectFromEPMDescribeLink(Long number) {
-		ArrayList<EPMDescribeLink> linkList = new ArrayList<>();
-		try {
-			QuerySpec qs = new QuerySpec(EPMDescribeLink.class);
-			qs.appendWhere(
-					new SearchCondition(EPMDescribeLink.class, "roleBObjectRef.key.id", SearchCondition.EQUAL, number));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			if (qr.hasMoreElements()) {
-				EPMDescribeLink epmDescribeLink = (EPMDescribeLink) qr.nextElement();
-				linkList.add(epmDescribeLink);
-				return linkList;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
 }

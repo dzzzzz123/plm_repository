@@ -466,27 +466,6 @@ public class WorkflowUtil {
 		return wa;
 	}
 
-	/**
-	 * 获取升级流程中所有升级对象
-	 * 
-	 * @param pn
-	 * @return
-	 * @throws WTException
-	 */
-	public static ArrayList<Promotable> getPromotionNotice(PromotionNotice pn) throws WTException {
-		ArrayList<Promotable> targetObjs = new ArrayList<Promotable>();
-		try {
-			QueryResult qr = MaturityHelper.service.getPromotionTargets(pn, false);
-			while (qr.hasMoreElements()) {
-				PromotionTarget pt = (PromotionTarget) qr.nextElement();
-				Promotable ptObj = pt.getPromotable();
-				targetObjs.add(ptObj);
-			}
-			return targetObjs;
-		} catch (Exception e) {
-			throw new WTException(e);
-		}
-	}
 
 	/**
 	 * 赋予用户流程编辑权限
@@ -520,22 +499,6 @@ public class WorkflowUtil {
 		}
 	}
 
-	/**
-	 * 获取活动名称
-	 * 
-	 * @param wiOid
-	 * @return
-	 * @throws WTException
-	 */
-	public static String getActName(String wiOid) throws WTException {
-		// LOGGER.debug("#### getActName by oid --->"+wiOid);
-		String name = "";
-		WorkItem wi = (WorkItem) CommonUtil.oid2Object(wiOid);
-		WfAssignedActivity wfa = (WfAssignedActivity) wi.getSource().getObject();
-		name = wfa.getName();
-		// LOGGER.debug("#### getActName name--->"+name);
-		return name;
-	}
 
 	/**
 	 * 获取流程任务的路由选择
@@ -578,29 +541,6 @@ public class WorkflowUtil {
 		return voting;
 	}
 
-	/**
-	 * 获取流程任务的同一个活动下的所有任务
-	 * 
-	 * @param wi
-	 * @return
-	 */
-	public static ArrayList<WorkItem> getWorkItems(WorkItem wi) {
-		ArrayList<WorkItem> list = new ArrayList<WorkItem>();
-		WfAssignedActivity waa = (WfAssignedActivity) wi.getSource().getObject();
-		try {
-			QuerySpec qs = new QuerySpec(WorkItem.class);
-			qs.appendWhere(new SearchCondition(WorkItem.class, "source.key.id", SearchCondition.EQUAL,
-					waa.getPersistInfo().getObjectIdentifier().getId()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			while (qr.hasMoreElements()) {
-				WorkItem workItem = (WorkItem) qr.nextElement();
-				list.add(workItem);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return list;
-	}
 
 	/**
 	 * 获取同一个活动下的所有任务
@@ -615,7 +555,6 @@ public class WorkflowUtil {
 			QuerySpec qs = new QuerySpec(WorkItem.class);
 			qs.appendWhere(new SearchCondition(WorkItem.class, "source.key.id", SearchCondition.EQUAL,
 					waa.getPersistInfo().getObjectIdentifier().getId()));
-			LOGGER.debug(qs.getWhere());
 			QueryResult qr = PersistenceHelper.manager.find(qs);
 			while (qr.hasMoreElements()) {
 				WorkItem workItem = (WorkItem) qr.nextElement();
@@ -790,16 +729,6 @@ public class WorkflowUtil {
 	}
 
 	/***
-	 * 受影响对象
-	 */
-	public static final String AffectedObjects = "AffectedObjects";
-
-	/***
-	 * 产生的对象
-	 */
-	public static final String ResultingObjects = "ResultingObjects";
-
-	/***
 	 * 获取审阅/变更目标对象
 	 * 
 	 * @param <T>
@@ -814,7 +743,7 @@ public class WorkflowUtil {
 			throws Exception {
 		ArrayList<T> list = new ArrayList<T>();
 
-		if (!type.equals(AffectedObjects) && !type.equals(ResultingObjects)) {
+		if (!type.equals("AffectedObjects") && !type.equals("ResultingObjects")) {
 			LOGGER.debug("获取审阅/变更目标对象失败，只能指定为受影响对象或产生的对象");
 			return list;
 		}
@@ -831,7 +760,7 @@ public class WorkflowUtil {
 			}
 		} else if (primaryBusinessObject instanceof WTChangeOrder2) {
 
-			if (type.equals(AffectedObjects)) {
+			if (type.equals("AffectedObjects")) {
 				WTChangeOrder2 eco = (WTChangeOrder2) primaryBusinessObject;
 				QueryResult qr = ChangeHelper2.service.getChangeablesBefore(eco);
 				while (qr.hasMoreElements()) {
@@ -841,7 +770,7 @@ public class WorkflowUtil {
 						list.add(targerObj);
 					}
 				}
-			} else if (type.equals(ResultingObjects)) {
+			} else if (type.equals("ResultingObjects")) {
 				WTChangeOrder2 eco = (WTChangeOrder2) primaryBusinessObject;
 				QueryResult qr = ChangeHelper2.service.getChangeablesAfter(eco);
 				while (qr.hasMoreElements()) {
@@ -855,7 +784,7 @@ public class WorkflowUtil {
 
 		} else if (primaryBusinessObject instanceof WTChangeActivity2) {
 
-			if (type.equals(AffectedObjects)) {
+			if (type.equals("AffectedObjects")) {
 				WTChangeActivity2 eca = (WTChangeActivity2) primaryBusinessObject;
 				QueryResult qr = ChangeHelper2.service.getChangeablesBefore(eca);
 				while (qr.hasMoreElements()) {
@@ -865,7 +794,7 @@ public class WorkflowUtil {
 						list.add(targerObj);
 					}
 				}
-			} else if (type.equals(ResultingObjects)) {
+			} else if (type.equals("ResultingObjects")) {
 				WTChangeActivity2 eca = (WTChangeActivity2) primaryBusinessObject;
 				QueryResult qr = ChangeHelper2.service.getChangeablesAfter(eca);
 				while (qr.hasMoreElements()) {
@@ -879,22 +808,5 @@ public class WorkflowUtil {
 
 		}
 		return list;
-	}
-
-	/***
-	 * 根据oid，返回持久化对象
-	 * 
-	 * @param oid
-	 * @return
-	 * @throws WTException
-	 */
-	public static Persistable getPersistableByOid(String oid) throws WTException {
-		Persistable per = null;
-		if (StringUtils.isNotEmpty(oid)) {
-			ReferenceFactory referencefactory = new ReferenceFactory();
-			WTReference wtreference = referencefactory.getReference(oid);
-			per = wtreference.getObject();
-		}
-		return per;
 	}
 }

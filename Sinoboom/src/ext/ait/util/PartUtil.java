@@ -95,8 +95,6 @@ import wt.workflow.engine.WfState;
 
 public class PartUtil {
 
-	public static String CLASSIFICATION_SEPRATOR = "/";
-
 	/**
 	 * @description 得到对象的自定义类型
 	 * @param obj
@@ -118,7 +116,6 @@ public class PartUtil {
 				e.printStackTrace();
 			}
 		}
-
 		return typeDisplayName;
 	}
 
@@ -332,7 +329,7 @@ public class PartUtil {
 //			for (tmpNodeView = ClassificationHelper.service.getParentNodeDefaultView(
 //					clsNodeDftView); tmpNodeView != null; tmpNodeView = ClassificationHelper.service
 //							.getParentNodeDefaultView(tmpNodeView))
-//				clsPath = tmpNodeView.getName() + CLASSIFICATION_SEPRATOR + clsPath;
+//				clsPath = tmpNodeView.getName() + "/" + clsPath;
 //		} catch (RemoteException rme2) {
 //			rme2.printStackTrace();
 //		} catch (CSMClassificationNavigationException csmclassificationnavigationexception2) {
@@ -662,7 +659,6 @@ public class PartUtil {
 					list.add(part);
 				}
 			}
-
 		} catch (WTException e) {
 			e.printStackTrace();
 		}
@@ -780,38 +776,6 @@ public class PartUtil {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * 通过cad文档找到部件
-	 * 
-	 * @param doc
-	 * @return
-	 */
-	public static WTPart getPartByEPM(EPMDocument doc) {
-		WTPart wtPart = null;
-		try {
-			QuerySpec qs = new QuerySpec(EPMDescribeLink.class);
-			qs.appendWhere(new SearchCondition(EPMDescribeLink.class, "roleBObjectRef.key.id", SearchCondition.EQUAL,
-					PersistenceHelper.getObjectIdentifier(doc)), new int[] { 0, -1 });
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			if (qr.size() == 1) {
-				EPMDescribeLink link = (EPMDescribeLink) qr.nextElement();
-				WTObject object = link.getDescribes();
-				if (object instanceof WTPart) {
-					wtPart = (WTPart) object;
-					System.out.println("<----WTPart----->" + wtPart);
-				}
-			} else {
-				System.out.println("<----WTPart----->" + wtPart);
-				return wtPart;
-			}
-		} catch (QueryException e) {
-			e.printStackTrace();
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return wtPart;
 	}
 
 	/**
@@ -965,7 +929,7 @@ public class PartUtil {
 
 		} catch (WTException e) {
 			e.printStackTrace();
-			throw new WTException("No Described Document on Part :" + part.getName());
+			throw new WTException("No Reference Document on Part :" + part.getName());
 		}
 		return list;
 	}

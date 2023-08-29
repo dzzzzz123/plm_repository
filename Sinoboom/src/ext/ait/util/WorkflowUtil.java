@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 import org.apache.logging.log4j.Logger;
@@ -69,8 +70,8 @@ public class WorkflowUtil {
 	 * @return ArrayList<WTObject>
 	 * @throws WTException
 	 */
-	public static ArrayList<WTObject> getTargerObjectByPromotionNotices(PromotionNotice pn) throws WTException {
-		ArrayList<WTObject> list = new ArrayList<WTObject>();
+	public static List<WTObject> getTargerObjectByPromotionNotices(PromotionNotice pn) throws WTException {
+		List<WTObject> list = new ArrayList<WTObject>();
 		QueryResult qr = MaturityHelper.service.getPromotionTargets(pn, false);
 		while (qr.hasMoreElements()) {
 			PromotionTarget pt = (PromotionTarget) qr.nextElement();
@@ -172,7 +173,8 @@ public class WorkflowUtil {
 				}
 			}
 			if (process != null) {
-				LOGGER.debug("[" + pboId + "]的最新流程为--->" + process.getName() + "|" + CommonUtil.object2Oid(process));
+				LOGGER.debug(
+						"[" + pboId + "]的最新流程为--->" + process.getName() + "|" + PersistenceUtil.object2Oid(process));
 			} else {
 				LOGGER.debug("[" + pboId + "]没有流程记录");
 			}

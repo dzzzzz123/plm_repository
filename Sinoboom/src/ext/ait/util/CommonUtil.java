@@ -1,7 +1,5 @@
 package ext.ait.util;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
@@ -13,28 +11,11 @@ import com.ptc.core.meta.common.IdentifierFactory;
 import com.ptc.core.meta.common.TypeIdentifier;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinition;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinitionMaster;
-import com.ptc.windchill.enterprise.part.commands.PartDocServiceCommand;
 
-import wt.content.ApplicationData;
-import wt.content.ContentHelper;
-import wt.content.ContentHolder;
-import wt.content.ContentRoleType;
-import wt.content.URLData;
-import wt.doc.WTDocument;
-import wt.doc.WTDocumentDependencyLink;
-import wt.doc.WTDocumentMaster;
-import wt.doc.WTDocumentMasterIdentity;
 import wt.enterprise.RevisionControlled;
-import wt.epm.EPMDocument;
-import wt.epm.EPMDocumentMaster;
-import wt.epm.EPMDocumentMasterIdentity;
-import wt.epm.EPMDocumentType;
-import wt.fc.IdentityHelper;
 import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
-import wt.fc.ReferenceFactory;
-import wt.fc.WTObject;
 import wt.folder.Folder;
 import wt.folder.FolderHelper;
 import wt.folder.FolderingInfo;
@@ -46,9 +27,6 @@ import wt.inf.container.WTContainerRef;
 import wt.log4j.LogR;
 import wt.org.WTPrincipal;
 import wt.org.WTUser;
-import wt.part.WTPart;
-import wt.part.WTPartMaster;
-import wt.part.WTPartMasterIdentity;
 import wt.pds.StatementSpec;
 import wt.query.QueryException;
 import wt.query.QuerySpec;
@@ -57,22 +35,13 @@ import wt.services.ServiceProviderHelper;
 import wt.session.SessionHelper;
 import wt.type.TypedUtilityServiceHelper;
 import wt.util.WTException;
-import wt.vc.Iterated;
-import wt.vc.Mastered;
-import wt.vc.VersionControlHelper;
 import wt.vc.VersionIdentifier;
 import wt.vc.Versioned;
-import wt.vc.config.ConfigHelper;
-import wt.vc.config.ConfigSpec;
 import wt.vc.config.LatestConfigSpec;
 
 public class CommonUtil {
 
-	private static ReferenceFactory factory = new ReferenceFactory();
-
 	private static Logger LOGGER = LogR.getLogger(CommonUtil.class.getName());
-
-	private static EPMDocumentType CADDRAWING = EPMDocumentType.toEPMDocumentType("CADDRAWING"); //
 
 	/**
 	 * 转换中文格式，避免中文乱码
@@ -145,260 +114,6 @@ public class CommonUtil {
 		} else {
 			path.insert(0, "/Default");
 		}
-	}
-
-	/**
-	 * 更改部件/文档/图纸的名称
-	 * 
-	 * @param mast
-	 * @param name
-	 */
-	public static void changeName(Mastered mast, String name) {
-		WTPrincipal user = null;
-		try {
-			user = SessionHelper.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			if (mast instanceof WTDocumentMaster) {
-				WTDocumentMaster master = (WTDocumentMaster) mast;
-				master = (WTDocumentMaster) PersistenceHelper.manager.refresh(master);
-				WTDocumentMasterIdentity identity = (WTDocumentMasterIdentity) master.getIdentificationObject();
-				identity.setName(name);
-				master = (WTDocumentMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			} else if (mast instanceof WTPartMaster) {
-				WTPartMaster master = (WTPartMaster) mast;
-				master = (WTPartMaster) PersistenceHelper.manager.refresh(master);
-				WTPartMasterIdentity identity = (WTPartMasterIdentity) master.getIdentificationObject();
-				identity.setName(name);
-				master = (WTPartMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			} else if (mast instanceof EPMDocumentMaster) {
-				EPMDocumentMaster master = (EPMDocumentMaster) mast;
-				master = (EPMDocumentMaster) PersistenceHelper.manager.refresh(master);
-				EPMDocumentMasterIdentity identity = (EPMDocumentMasterIdentity) master.getIdentificationObject();
-				identity.setName(name);
-				master = (EPMDocumentMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			}
-			SessionHelper.manager.setPrincipal(user.getName());
-			user = null;
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (user != null) {
-				try {
-					SessionHelper.manager.setPrincipal(user.getName());
-				} catch (WTException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	/**
-	 * 修改文档、物料、图纸的编号
-	 * 
-	 * @param mast
-	 * @param number
-	 */
-	public static void changeNumber(Mastered mast, String number) {
-		WTPrincipal user = null;
-		try {
-			user = SessionHelper.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			if (mast instanceof WTDocumentMaster) {
-				WTDocumentMaster master = (WTDocumentMaster) mast;
-				master = (WTDocumentMaster) PersistenceHelper.manager.refresh(master);
-				WTDocumentMasterIdentity identity = (WTDocumentMasterIdentity) master.getIdentificationObject();
-				identity.setNumber(number);
-				master = (WTDocumentMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			} else if (mast instanceof WTPartMaster) {
-				WTPartMaster master = (WTPartMaster) mast;
-				master = (WTPartMaster) PersistenceHelper.manager.refresh(master);
-				WTPartMasterIdentity identity = (WTPartMasterIdentity) master.getIdentificationObject();
-				identity.setNumber(number);
-				master = (WTPartMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			} else if (mast instanceof EPMDocumentMaster) {
-				EPMDocumentMaster master = (EPMDocumentMaster) mast;
-				master = (EPMDocumentMaster) PersistenceHelper.manager.refresh(master);
-				EPMDocumentMasterIdentity identity = (EPMDocumentMasterIdentity) master.getIdentificationObject();
-				identity.setNumber(number);
-				master = (EPMDocumentMaster) IdentityHelper.service.changeIdentity(master, identity);
-				PersistenceHelper.manager.save(master);
-			}
-			SessionHelper.manager.setPrincipal(user.getName());
-			user = null;
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (user != null) {
-				try {
-					SessionHelper.manager.setPrincipal(user.getName());
-				} catch (WTException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	/**
-	 * 获取文档的主要内容
-	 * 
-	 * @param holder
-	 * @return
-	 */
-	public static ArrayList<ApplicationData> getSecondaryContent(ContentHolder holder) {
-		ContentHolder contentHolder = null;
-		ArrayList<ApplicationData> dataList = new ArrayList<ApplicationData>();
-		try {
-			contentHolder = ContentHelper.service.getContents(holder);
-			QueryResult qr = ContentHelper.service.getContentsByRole(contentHolder, ContentRoleType.SECONDARY);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof URLData) {
-
-				}
-			}
-		} catch (Exception e1) {
-			e1.printStackTrace();
-		}
-		return dataList;
-	}
-
-	/**
-	 * 获取对象的版本，如A.1
-	 * 
-	 * @param revisionControlled
-	 * @return
-	 */
-	public static String getVersion(RevisionControlled revisionControlled) {
-		return revisionControlled.getVersionInfo().getIdentifier().getValue() + "."
-				+ revisionControlled.getIterationInfo().getIdentifier().getValue();
-	}
-
-	/**
-	 * 获取对象的oid
-	 * 
-	 * @param obj
-	 * @return
-	 */
-	public static String object2Oid(WTObject obj) {
-		return "OR:" + obj.getClass().getName() + ":" + obj.getPersistInfo().getObjectIdentifier().getId();
-	}
-
-	/**
-	 * 获取oid所对应的对象
-	 * 
-	 * @param oid
-	 * @return
-	 * @throws WTException
-	 */
-	public static WTObject oid2Object(String oid) throws WTException {
-		return (WTObject) factory.getReference(oid).getObject();
-	}
-
-	/**
-	 * 校验对象是否为最新版
-	 * 
-	 * @param interated
-	 * @return
-	 * @throws WTException
-	 */
-	@SuppressWarnings("deprecation")
-	public static boolean isLatestIterated(Iterated interated) throws WTException {
-
-		Iterated localIterated = null;
-		boolean bool = false;
-		LatestConfigSpec localLatestConfigSpec = new LatestConfigSpec();
-
-		QueryResult localQueryResult = ConfigHelper.service.filteredIterationsOf(interated.getMaster(),
-				localLatestConfigSpec);
-		if ((localQueryResult != null) && (localQueryResult.size() <= 0)) {
-			ConfigSpec localConfigSpec = ConfigHelper.service.getDefaultConfigSpecFor(WTPartMaster.class);
-			localQueryResult = ConfigHelper.service.filteredIterationsOf(interated.getMaster(), localConfigSpec);
-		}
-
-		while ((localQueryResult.hasMoreElements()) && (!bool)) {
-			localIterated = (Iterated) localQueryResult.nextElement();
-			bool = localIterated.isLatestIteration();
-		}
-		LOGGER.debug("    the latest iteration=" + localIterated.getIdentity());
-		if (localIterated.equals(interated)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	/**
-	 * 获取最新版本的对象
-	 * 
-	 * @param master
-	 * @return
-	 * @throws WTException
-	 */
-	@SuppressWarnings("deprecation")
-	public static Iterated getLatestInterated(Mastered master) throws WTException {
-
-		Iterated localIterated = null;
-		LatestConfigSpec localLatestConfigSpec = new LatestConfigSpec();
-
-		QueryResult localQueryResult = ConfigHelper.service.filteredIterationsOf(master, localLatestConfigSpec);
-		if ((localQueryResult != null) && (localQueryResult.size() <= 0)) {
-			ConfigSpec localConfigSpec = ConfigHelper.service.getDefaultConfigSpecFor(WTPartMaster.class);
-			localQueryResult = ConfigHelper.service.filteredIterationsOf(master, localConfigSpec);
-		}
-
-		while ((localQueryResult.hasMoreElements())) {
-			Iterated localIterated1 = (Iterated) localQueryResult.nextElement();
-			if (localIterated1.isLatestIteration()) {
-				localIterated = localIterated1;
-			}
-		}
-		return localIterated;
-	}
-
-	/**
-	 * 获取上一个大版本的最新小版本，如果没有上一个大版本，则返回当前版本的最新小版本
-	 * 
-	 * @param revisionControlled
-	 * @return
-	 */
-	public static RevisionControlled getLastBigOne(RevisionControlled revisionControlled) {
-		RevisionControlled last = null;
-		try {
-			last = (RevisionControlled) VersionControlHelper.service.predecessorOf(revisionControlled);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return last;
-	}
-
-	/**
-	 * 获取上一个大版本的最新小版本，如果没有上一个大版本，则返回当前版本的最新小版本
-	 * 
-	 * @param revisionControlled
-	 * @return
-	 */
-	public static RevisionControlled getLasterBigOne(RevisionControlled revisionControlled) {
-		RevisionControlled last = null;
-		try {
-			if ("A".equals(revisionControlled.getVersionInfo().getIdentifier().getValue())) {
-				return (RevisionControlled) getLatestInterated(revisionControlled.getMaster());
-			}
-			last = (RevisionControlled) VersionControlHelper.service.predecessorOf(revisionControlled);
-			if (!last.getVersionInfo().getIdentifier().getValue()
-					.equals(revisionControlled.getVersionInfo().getIdentifier().getValue())) {
-				return last;
-			} else {
-				last = getLasterBigOne(last);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return last;
 	}
 
 	/**
@@ -482,32 +197,6 @@ public class CommonUtil {
 			}
 		}
 		return type;
-	}
-
-	/**
-	 * 获取被参考文档
-	 * 
-	 * @param doc
-	 * @return
-	 * @throws WTException
-	 */
-	@SuppressWarnings("deprecation")
-	public static ArrayList<WTDocument> getDepByDoc(WTDocument doc) throws WTException {
-		ArrayList<WTDocument> doclist = new ArrayList<WTDocument>();
-		try {
-			QuerySpec qs = new QuerySpec(WTDocumentDependencyLink.class);
-			qs.appendWhere(new SearchCondition(WTDocumentDependencyLink.class, "rolBeObjectRef.key.id",
-					SearchCondition.EQUAL, doc.getPersistInfo().getObjectIdentifier().getId()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			while (qr.hasMoreElements()) {
-				WTDocumentDependencyLink link = (WTDocumentDependencyLink) qr.nextElement();
-				WTDocument depByDoc = (WTDocument) link.getRoleAObject();
-				doclist.add(depByDoc);
-			}
-		} catch (Exception e) {
-			throw new WTException(e);
-		}
-		return doclist;
 	}
 
 	/**
@@ -622,33 +311,6 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 根据编号获取对应最新版本的文档
-	 * 
-	 * @param number
-	 * @return
-	 */
-	@SuppressWarnings("deprecation")
-	public static WTDocument getDoc(String number) {
-		try {
-			if (StringUtils.isBlank(number)) {
-				return null;
-			}
-			QuerySpec qs = new QuerySpec(WTDocument.class);
-			qs.appendWhere(
-					new SearchCondition(WTDocument.class, WTDocument.NUMBER, SearchCondition.EQUAL, number.trim()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			qr = new LatestConfigSpec().process(qr);
-			if (qr.hasMoreElements()) {
-				WTDocument doc = (WTDocument) qr.nextElement();
-				return doc;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
 	 * 根据VR获取对应版本的对象
 	 * 
 	 * @param queryClass
@@ -673,7 +335,6 @@ public class CommonUtil {
 			e.printStackTrace();
 		}
 		return null;
-
 	}
 
 	/**
@@ -804,30 +465,4 @@ public class CommonUtil {
 		return persistable;
 	}
 
-	/**
-	 * 根据3D获取2D drawing
-	 *
-	 * @param cad
-	 * @throws Exception
-	 */
-	public static List<Persistable> get2DDrawingByWTPart(WTPart part) throws Exception {
-		List<Persistable> result = new ArrayList<Persistable>();
-		try {
-			QueryResult qr = PartDocServiceCommand.getAssociatedCADDocuments(part);// CAD文档
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof EPMDocument) {
-					EPMDocument doc = (EPMDocument) obj;
-					EPMDocumentType docType = doc.getDocType();
-					if (CADDRAWING.equals(docType)) {
-						result.add(doc);
-					}
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw e;
-		}
-		return result;
-	}
 }

@@ -1,49 +1,41 @@
 package ext.ait.util;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 
 import com.ptc.core.lwc.server.LWCLocalizablePropertyValue;
 import com.ptc.core.lwc.server.LWCPropertyDefinition;
 import com.ptc.core.lwc.server.LWCStructEnumAttTemplate;
-import com.ptc.core.meta.type.mgmt.common.TypeDefinitionDefaultView;
-import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinition;
 import com.ptc.netmarkets.model.NmOid;
-import com.ptc.windchill.enterprise.part.commands.AssociationLinkObject;
-import com.ptc.windchill.enterprise.part.commands.PartDocServiceCommand;
 import com.ptc.windchill.enterprise.workflow.WorkflowCommands;
 
 import wt.configuration.TraceCode;
 import wt.doc.WTDocument;
-import wt.doc.WTDocumentMaster;
 import wt.epm.EPMDocument;
 import wt.epm.build.EPMBuildRule;
-import wt.epm.util.EPMSoftTypeServerUtilities;
 import wt.fc.Identified;
 import wt.fc.ObjectReference;
 import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.PersistenceServerHelper;
 import wt.fc.QueryResult;
-import wt.fc.WTObject;
 import wt.fc.collections.WTCollection;
 import wt.fc.collections.WTHashSet;
 import wt.folder.CabinetBased;
-import wt.folder.Folder;
 import wt.folder.FolderEntry;
 import wt.folder.FolderHelper;
 import wt.inf.container.WTContained;
 import wt.inf.container.WTContainer;
 import wt.inf.container.WTContainerHelper;
 import wt.inf.container.WTContainerRef;
-import wt.lifecycle.LifeCycleManaged;
 import wt.lifecycle.LifeCycleState;
 import wt.lifecycle.State;
 import wt.maturity.MaturityHelper;
@@ -70,44 +62,17 @@ import wt.query.SearchCondition;
 import wt.query.TableColumn;
 import wt.session.SessionHelper;
 import wt.session.SessionServerHelper;
-import wt.type.TypeDefinitionReference;
 import wt.util.WTException;
 import wt.util.WTPropertyVetoException;
 import wt.vc.VersionControlHelper;
-import wt.vc.baseline.ManagedBaseline;
 import wt.vc.config.LatestConfigSpec;
 import wt.vc.struct.StructHelper;
-import wt.vc.wip.CheckoutLink;
 import wt.vc.wip.WorkInProgressHelper;
 import wt.vc.wip.Workable;
 import wt.workflow.engine.WfProcess;
 import wt.workflow.engine.WfState;
 
 public class PartUtil {
-
-	/**
-	 * @description 得到对象的自定义/内部名称
-	 * @param WTObject
-	 * @return String
-	 * @throws WTException
-	 */
-	public static String getTypeName(WTObject obj) {
-		String typeDisplayName = null;
-		TypeDefinitionReference ref = null;
-		WTTypeDefinition definition = null;
-		if (obj instanceof WTPart) {
-			ref = ((WTPart) obj).getTypeDefinitionReference();
-			try {
-				@SuppressWarnings("deprecation")
-				TypeDefinitionDefaultView view = EPMSoftTypeServerUtilities.getTypeDefinition(ref);
-				definition = (WTTypeDefinition) PersistenceHelper.manager.refresh(view.getObjectID());
-				typeDisplayName = definition.getDisplayNameKey(); // 类型的key
-			} catch (WTException e) {
-				e.printStackTrace();
-			}
-		}
-		return typeDisplayName;
-	}
 
 	/**
 	 * 取得所有子部件的关联
@@ -585,68 +550,6 @@ public class PartUtil {
 	}
 
 	/**
-	 * 修改几乎所有存在于Windchill中对象的状态
-	 * 
-	 * @param Object
-	 * @param Object
-	 * @return String
-	 * @throws WTPropertyVetoException
-	 * @throws WTException
-	 */
-	public static String changeObjectState(Object obj, Object objState) throws WTPropertyVetoException, WTException {
-		String message = "";
-		State newState = null;
-		WTPrincipal currentUser = null;
-		try {
-			currentUser = SessionHelper.manager.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			if (objState instanceof State) {
-				newState = (State) objState;
-			} else if (objState instanceof String) {
-				newState = State.toState(objState + "");
-			}
-
-			if (obj instanceof WTPart) {
-				WTPart part = (WTPart) obj;
-				part = (WTPart) wt.lifecycle.LifeCycleHelper.service
-						.setLifeCycleState((wt.lifecycle.LifeCycleManaged) part, newState);
-				PersistenceHelper.manager.refresh(part);
-
-			} else if (obj instanceof EPMDocument) {
-				EPMDocument epmDocument = (EPMDocument) obj;
-				epmDocument = (EPMDocument) wt.lifecycle.LifeCycleHelper.service
-						.setLifeCycleState((wt.lifecycle.LifeCycleManaged) epmDocument, newState);
-				PersistenceHelper.manager.refresh(epmDocument);
-
-			} else if (obj instanceof WTDocument) {
-				WTDocument wtDocument = (WTDocument) obj;
-				wtDocument = (WTDocument) wt.lifecycle.LifeCycleHelper.service
-						.setLifeCycleState((wt.lifecycle.LifeCycleManaged) wtDocument, newState);
-				PersistenceHelper.manager.refresh(wtDocument);
-
-			} else if (obj instanceof ManagedBaseline) {
-				ManagedBaseline managedBaseline = (ManagedBaseline) obj;
-				managedBaseline = (ManagedBaseline) wt.lifecycle.LifeCycleHelper.service
-						.setLifeCycleState((wt.lifecycle.LifeCycleManaged) managedBaseline, newState);
-				PersistenceHelper.manager.refresh(managedBaseline);
-
-			} else if (obj instanceof LifeCycleManaged) {
-				LifeCycleManaged lifeCycleManaged = (LifeCycleManaged) obj;
-				lifeCycleManaged = (LifeCycleManaged) wt.lifecycle.LifeCycleHelper.service
-						.setLifeCycleState((wt.lifecycle.LifeCycleManaged) lifeCycleManaged, newState);
-				PersistenceHelper.manager.refresh(lifeCycleManaged);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			if (currentUser != null) {
-				SessionHelper.manager.setPrincipal(currentUser.getName());
-			}
-		}
-		return message;
-	}
-
-	/**
 	 * 通过说明文档找到部件
 	 * 
 	 * @param WTDocument
@@ -685,167 +588,6 @@ public class PartUtil {
 		} catch (WTException e) {
 			e.printStackTrace();
 		}
-	}
-
-	/**
-	 * 获取部件关联的结构图文档（以.prt.asm结尾）
-	 * 
-	 * @param WTPart
-	 * @return EPMDocument
-	 * @throws Exception
-	 */
-	public static EPMDocument getProECADByPart(WTPart part) throws Exception {
-		EPMDocument doc = null;
-		WTPrincipal currentUser = null;
-		try {
-			currentUser = SessionHelper.manager.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-			for (Object object : cadDocumentsAndLinks) {
-				if (object instanceof AssociationLinkObject) {
-					AssociationLinkObject alo = (AssociationLinkObject) object;
-					doc = alo.getCadObject();
-					return doc;
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-		} finally {
-			if (currentUser != null) {
-				SessionHelper.manager.setPrincipal(currentUser.getName());
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * 获取部件关联的.asm或者.drw文档
-	 * 
-	 * @param WTPart
-	 * @param String
-	 * @return EPMDocument
-	 * @throws Exception
-	 */
-	public static EPMDocument get2DOr3DByPart(WTPart part, String flag) throws Exception {
-		EPMDocument doc = null;
-		WTPrincipal currentUser = null;
-		try {
-			currentUser = SessionHelper.manager.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-			for (Object object : cadDocumentsAndLinks) {
-				if (object instanceof AssociationLinkObject) {
-					AssociationLinkObject alo = (AssociationLinkObject) object;
-					doc = alo.getCadObject();
-					if (StringUtils.endsWithIgnoreCase(doc.getCADName(), ".drw") && flag.equals("2D")) {// 2d drw
-						return doc;
-					} else if (StringUtils.endsWithIgnoreCase(doc.getCADName(), ".asw") && flag.equals("3D")) {
-						return doc;
-					}
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new Exception("No ECAD Document on Part :" + part.getName());
-		} finally {
-			if (currentUser != null) {
-				SessionHelper.manager.setPrincipal(currentUser.getName());
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * 部件与CAD文档， 说明关系 通过部件获取CAD文档，可能包含3D和2D 1）如果是结构部件，找结构3D图纸 CADCOMPONENT & PROE
-	 * 2）如果是PCBA，找ECAD图纸 3）如果是软件部件，找autocad图纸
-	 * 
-	 * @param WTPart
-	 * @return List<EPMDocument>
-	 * @throws Exception
-	 */
-	@SuppressWarnings("deprecation")
-	public static List<EPMDocument> getAllCADByPart(WTPart part) throws Exception {
-		List<EPMDocument> docs = new ArrayList<EPMDocument>();
-		WTPrincipal currentUser = null;
-		try {
-			currentUser = SessionHelper.manager.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-			for (Object object : cadDocumentsAndLinks) {
-				if (object instanceof AssociationLinkObject) {
-					AssociationLinkObject alo = (AssociationLinkObject) object;
-					EPMDocument doc = alo.getCadObject();
-					docs.add(doc);
-				}
-			}
-
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-		} finally {
-			if (currentUser != null) {
-				SessionHelper.manager.setPrincipal(currentUser.getName());
-			}
-		}
-		return docs;
-	}
-
-	/**
-	 * 获取部件关联的说明方文档
-	 * 
-	 * @param WTPart
-	 * @return List<WTDocument>
-	 * @throws WTException
-	 */
-	public static List<WTDocument> getDescribedDocumentsFromPart(WTPart part) throws WTException {
-		QueryResult qr = null;
-		List<WTDocument> list = new ArrayList<WTDocument>();
-		try {
-			qr = WTPartHelper.service.getDescribedByDocuments(part);// 普通说明文档
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTDocument) {
-					WTDocument doc = (WTDocument) obj;
-					list.add(doc);
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new WTException("No Described Document on Part :" + part.getName());
-		}
-		return list;
-	}
-
-	/**
-	 * 获取部件关联的参考文档
-	 * 
-	 * @param WTPart
-	 * @return List<WTDocument>
-	 * @throws WTException
-	 */
-	@SuppressWarnings("deprecation")
-	public static List<WTDocument> getReferenceDocumentsFromPart(WTPart part) throws WTException {
-		QueryResult qr = null;
-		List<WTDocument> list = new ArrayList<WTDocument>();
-		try {
-			// 根据part获取关联的参考文档
-			qr = WTPartHelper.service.getReferencesWTDocumentMasters(part);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTDocumentMaster) {
-					WTDocumentMaster docmaster = (WTDocumentMaster) obj;
-					QueryResult qs = VersionControlHelper.service.allVersionsOf(docmaster);
-					WTDocument doc = (WTDocument) qs.nextElement();
-					list.add(doc);
-				}
-			}
-
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new WTException("No Reference Document on Part :" + part.getName());
-		}
-		return list;
 	}
 
 	/**
@@ -1002,48 +744,6 @@ public class PartUtil {
 			e.printStackTrace();
 		}
 		return localList; // 返回局部列表
-	}
-
-	/**
-	 * 判断对象是否处于检出状态
-	 * 
-	 * @param Workable
-	 * @return boolean
-	 */
-	public static boolean isCheckOut(Workable workable) {
-		try {
-			return WorkInProgressHelper.isCheckedOut(workable);
-		} catch (WTException e) {
-
-		}
-		return false;
-	}
-
-	/**
-	 * 检出部件
-	 * 
-	 * @param Workable
-	 * @return Workable
-	 * @throws WTException
-	 */
-	public static Workable checkoutPart(Workable workable) throws WTException {
-		if (workable == null) {
-			return null;
-		}
-		if (WorkInProgressHelper.isWorkingCopy(workable)) {
-			return workable;
-		}
-		Folder folder = WorkInProgressHelper.service.getCheckoutFolder();
-		try {
-			CheckoutLink checkoutLink = WorkInProgressHelper.service.checkout(workable, folder, "AutoCheckOut");
-			workable = checkoutLink.getWorkingCopy();
-		} catch (WTPropertyVetoException ex) {
-			ex.printStackTrace();
-		}
-		if (!WorkInProgressHelper.isWorkingCopy(workable)) {
-			workable = WorkInProgressHelper.service.workingCopyOf(workable);
-		}
-		return workable;
 	}
 
 	/**
@@ -1249,12 +949,11 @@ public class PartUtil {
 		if (part == null) {
 			return "";
 		}
-
 		String defaultUnit = part.getDefaultUnit().toString().toUpperCase();// 默认单位
 		IBAUtil ibautil = new IBAUtil(part);
 		String jldw = ibautil.getIBAValue("net.haige.jldw");// 计量单位
 		String P_UNIT = ibautil.getIBAValue("net.haige.P_UNIT");// 结构件单位
-		String typeName = PartUtil.getTypeName(part);
+		String typeName = PersistenceUtil.getTypeName(part);
 		if (StringUtils.equalsIgnoreCase(typeName, "com.ptc.ElectricalPart")) {// 电子元器件
 			if (StringUtils.isNotBlank(jldw)) {
 				return jldw.toUpperCase();
@@ -1307,6 +1006,30 @@ public class PartUtil {
 			e.printStackTrace();
 		} catch (WTPropertyVetoException e) {
 			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 根据url获取对应的wtpart对象
+	 * http://plmtest.sinoboom.com.cn/Windchill/app/#ptc1/tcomp/infoPage?u8=1&oid=OR%3Awt.part.WTPart%3A804374507
+	 * http://plmtest.sinoboom.com.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR:wt.part.WTPart:1099247509
+	 * 
+	 * @param String
+	 * @return WTPart
+	 */
+	public static WTPart getPartFromURL(String url) {
+		try {
+			Pattern pattern = Pattern.compile("(?<=WTPart)(%3A|:)([0-9]+)");
+			String oid = "";
+			Matcher matcher = pattern.matcher(url);
+			if (matcher.find()) {
+				oid = matcher.group(2);
+			}
+			WTPart part = (WTPart) PersistenceUtil.oid2Object(oid);
+			return part;
+		} catch (Exception e) {
+			System.out.println("系统未找到url指定的部件");
+			return null;
 		}
 	}
 }

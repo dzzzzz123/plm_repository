@@ -2,14 +2,9 @@ package ext.ait.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -30,7 +25,6 @@ import wt.doc.WTDocument;
 import wt.doc.WTDocumentMaster;
 import wt.epm.EPMDocument;
 import wt.epm.build.EPMBuildRule;
-import wt.epm.structure.EPMDescribeLink;
 import wt.epm.util.EPMSoftTypeServerUtilities;
 import wt.fc.Identified;
 import wt.fc.ObjectReference;
@@ -49,8 +43,6 @@ import wt.inf.container.WTContained;
 import wt.inf.container.WTContainer;
 import wt.inf.container.WTContainerHelper;
 import wt.inf.container.WTContainerRef;
-import wt.lifecycle.LifeCycleException;
-import wt.lifecycle.LifeCycleHelper;
 import wt.lifecycle.LifeCycleManaged;
 import wt.lifecycle.LifeCycleState;
 import wt.lifecycle.State;
@@ -76,12 +68,10 @@ import wt.query.QueryException;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
 import wt.query.TableColumn;
-import wt.query.WhereExpression;
 import wt.session.SessionHelper;
 import wt.session.SessionServerHelper;
 import wt.type.TypeDefinitionReference;
 import wt.util.WTException;
-import wt.util.WTInvalidParameterException;
 import wt.util.WTPropertyVetoException;
 import wt.vc.VersionControlHelper;
 import wt.vc.baseline.ManagedBaseline;
@@ -96,8 +86,8 @@ import wt.workflow.engine.WfState;
 public class PartUtil {
 
 	/**
-	 * @description 得到对象的自定义类型
-	 * @param obj
+	 * @description 得到对象的自定义/内部名称
+	 * @param WTObject
 	 * @return String
 	 * @throws WTException
 	 */
@@ -122,12 +112,12 @@ public class PartUtil {
 	/**
 	 * 取得所有子部件的关联
 	 * 
-	 * @param parentPart
-	 * @return
+	 * @param WTPart
+	 * @return Vector<WTPartUsageLink>
 	 */
 	@SuppressWarnings("unchecked")
-	public static Vector getSubPartUsagelinks(WTPart parentPart) throws WTException {
-		Vector partlist = new Vector();
+	public static Vector<WTPartUsageLink> getSubPartUsagelinks(WTPart parentPart) throws WTException {
+		Vector<WTPartUsageLink> partlist = new Vector<>();
 		QueryResult subParts = WTPartHelper.service.getUsesWTPartMasters(parentPart);
 		while (subParts.hasMoreElements()) {
 			WTPartUsageLink usagelink = (WTPartUsageLink) subParts.nextElement();
@@ -139,9 +129,10 @@ public class PartUtil {
 	/**
 	 * 根据编号查询part
 	 * 
-	 * @param number
-	 * @return part
+	 * @param String
+	 * @return WTPart
 	 */
+	@SuppressWarnings("deprecation")
 	public static WTPart getWTPartByNumber(String number) {
 		WTPart result = null;
 		QueryResult qr = null;
@@ -165,29 +156,11 @@ public class PartUtil {
 		return result;
 	}
 
-	// public static List getBomByPart(WTPart part){
-	// try {
-	// QueryResult qr = WTPartHelper.service.getUsesWTPartMasters(part);
-	// List list = new ArrayList();
-	// while (qr.hasMoreElements()) {
-	// WTPartUsageLink usageLink = (WTPartUsageLink) qr.nextElement();
-	// QueryResult qr2 =
-	// VersionControlHelper.service.allVersionsOf(usageLink.getUses());
-	// if (qr2.hasMoreElements()) {
-	// WTPart subPart = (WTPart) qr2.nextElement();
-	// // System.out.println("subPart======="+subPart.getName());
-	// list.add(subPart);
-	// }
-	// }
-	// return list;
-	// }catch (Exception e){
-	// e.printStackTrace();
-	// }
-	// return null;
-	// }
-
 	/**
-	 * 根据part得到其子部件
+	 * 不递归获取部件所有的子部件
+	 * 
+	 * @param WTPart
+	 * @return List<WTPart>
 	 */
 	public static List<WTPart> getBomByPart(WTPart ProductPart) {
 		WTPart sPart = null;
@@ -209,6 +182,12 @@ public class PartUtil {
 		return list;
 	}
 
+	/**
+	 * 获取分类的全名称/路径（暂不清楚）
+	 * 
+	 * @param LWCStructEnumAttTemplate
+	 * @return String
+	 */
 	public static String getClassificationFullPath(LWCStructEnumAttTemplate structureEum) {
 		String part = "";
 		try {
@@ -263,13 +242,14 @@ public class PartUtil {
 	}
 
 	/**
-	 * 获取父节点
+	 * 获取分类的父节点（暂不清楚）
 	 * 
-	 * @param structureEum
-	 * @return
+	 * @param LWCStructEnumAttTemplate
+	 * @return LWCStructEnumAttTemplate
 	 * @throws WTException
 	 */
-	private static LWCStructEnumAttTemplate getParentStructEnum(LWCStructEnumAttTemplate structureEum)
+	@SuppressWarnings("deprecation")
+	public static LWCStructEnumAttTemplate getParentStructEnum(LWCStructEnumAttTemplate structureEum)
 			throws WTException {
 		boolean setAccessEnforced = SessionServerHelper.manager.setAccessEnforced(false);
 		LWCStructEnumAttTemplate result = null;
@@ -296,8 +276,8 @@ public class PartUtil {
 	/**
 	 * 根据名称获取分类节点
 	 * 
-	 * @param name
-	 * @return
+	 * @param String
+	 * @return LWCStructEnumAttTemplate
 	 * @throws WTException
 	 */
 	public static LWCStructEnumAttTemplate getStructureEum(String name) throws WTException {
@@ -353,8 +333,11 @@ public class PartUtil {
 //	}
 
 	/**
-	 * 更改部件编号
+	 * 修改部件编号
 	 * 
+	 * @param WTPart
+	 * @param String
+	 * @return boolean
 	 * @throws Exception
 	 */
 	public static boolean changePartNumber(WTPart part, String newPartNumber) throws Exception {
@@ -373,8 +356,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * 更改部件名称
+	 * 修改部件名称
 	 * 
+	 * @param WTPart
+	 * @param String
+	 * @return WTPart
 	 * @throws WTException
 	 */
 	public static WTPart changePartName(WTPart part, String newName) throws WTException {
@@ -397,8 +383,9 @@ public class PartUtil {
 	 * 
 	 * @param WTPartUsageLink
 	 * @return String
+	 * @throws WTException
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public static String getPartUsesOccurrence(WTPartUsageLink useagelink) throws WTException {
 		List listWTPart2 = new ArrayList();
 		long linkid = PersistenceHelper.getObjectIdentifier(useagelink).getId();
@@ -421,8 +408,7 @@ public class PartUtil {
 				}
 			}
 		}
-		String numberStr = sortPlaceNumber(occurrenceStr);// 对位号排序
-		return numberStr;
+		return sortPlaceNumber(occurrenceStr);
 	}
 
 	// 对位号排序
@@ -447,9 +433,9 @@ public class PartUtil {
 	}
 
 	/**
-	 * 查找替代料
+	 * 获取替代料的关联关系
 	 * 
-	 * @param useagelink
+	 * @param WTPartUsageLink
 	 * @return List<WTPartSubstituteLink>
 	 * @throws WTException
 	 */
@@ -473,15 +459,15 @@ public class PartUtil {
 	}
 
 	/**
-	 * 查找替代料
+	 * 获取替代料
 	 * 
-	 * @param useagelink
+	 * @param WTPartUsageLink
 	 * @return List<WTPart>
 	 * @throws WTException
 	 */
 	public static List<WTPart> getSubstituteParts(WTPartUsageLink useagelink) throws WTException {
 		List<WTPart> list = new ArrayList<WTPart>();
-		List<WTPartSubstituteLink> wtPartSubstituteLinks= getSubstitutePartsLink( useagelink);
+		List<WTPartSubstituteLink> wtPartSubstituteLinks = getSubstitutePartsLink(useagelink);
 		for (WTPartSubstituteLink wtPartSubstituteLink : wtPartSubstituteLinks) {
 			WTPartMaster partmast = wtPartSubstituteLink.getSubstitutes();
 			WTPart part = getWTPartByNumber(partmast.getNumber());
@@ -491,17 +477,17 @@ public class PartUtil {
 	}
 
 	/**
-	 * 查找替代料
+	 * 获取替代料的编号，用 | 隔开
 	 * 
-	 * @param useagelink
+	 * @param WTPartUsageLink
 	 * @return String
 	 * @throws WTException
 	 */
 	public static String getSubstitutePart(WTPartUsageLink useagelink) throws WTException {
-		StringB nums = "";
-		List<WTPart>  wtParts= getSubstituteParts(useagelink);
+		String nums = "";
+		List<WTPart> wtParts = getSubstituteParts(useagelink);
 		for (WTPart wtPart : wtParts) {
-				String s = part.getNumber();
+			String s = wtPart.getNumber();
 			if (nums == "") {
 				nums = s;
 			} else {
@@ -512,10 +498,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 查找主料的全局替代料
+	 * 根据部件获取替代料的关联关系
 	 * 
-	 * @param wtpart
-	 * @return
+	 * @param WTPart
+	 * @return List<WTPartAlternateLink>
 	 * @throws WTException
 	 */
 	public static List<WTPartAlternateLink> getWTPartAlternateLinks(WTPart wtpart) throws WTException {
@@ -537,9 +523,13 @@ public class PartUtil {
 	}
 
 	/**
-	 * @param WTPart , String state 设置WTPart的状态
-	 * @return void
-	 * @throws Exception
+	 * 修改部件生命周期状态
+	 * 
+	 * @param WTPart
+	 * @param String
+	 * @return String
+	 * @throws WTPropertyVetoException
+	 * @throws WTException
 	 */
 	public static String changePartState(WTPart part, String state) throws WTPropertyVetoException, WTException {
 		String message = "";
@@ -563,6 +553,15 @@ public class PartUtil {
 		return message;
 	}
 
+	/**
+	 * 修改部件状态（直接使用State进行修改）
+	 * 
+	 * @param WTPart
+	 * @param State
+	 * @return String
+	 * @throws WTPropertyVetoException
+	 * @throws WTException
+	 */
 	public static String changePartState(WTPart part, State state) throws WTPropertyVetoException, WTException {
 		String message = "";
 		WTPrincipal currentUser = null;
@@ -585,8 +584,14 @@ public class PartUtil {
 		return message;
 	}
 
-	/***
-	 * 修改WTPart EPMDocument或者基线 状态 @description @param @return @throws
+	/**
+	 * 修改几乎所有存在于Windchill中对象的状态
+	 * 
+	 * @param Object
+	 * @param Object
+	 * @return String
+	 * @throws WTPropertyVetoException
+	 * @throws WTException
 	 */
 	public static String changeObjectState(Object obj, Object objState) throws WTPropertyVetoException, WTException {
 		String message = "";
@@ -642,9 +647,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 部件与文档是 说明关系 通过文档 获取部件
+	 * 通过说明文档找到部件
 	 * 
-	 * @param doc
+	 * @param WTDocument
+	 * @return List<WTPart>
 	 */
 	public static List<WTPart> getPartByDescribesDoc(WTDocument doc) {
 		QueryResult qr = null;
@@ -666,11 +672,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * 添加cad到wtpart
+	 * 将CAD文档关联到部件上
 	 * 
-	 * @param part
-	 * @param cad
-	 * @param linkType 关联关系
+	 * @param WTPart
+	 * @param EPMDocument
+	 * @param int
 	 */
 	public static void addCAD2WTPart(WTPart part, EPMDocument cad, int linkType) {
 		try {
@@ -682,9 +688,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 获取部件的结构图prt或asm
+	 * 获取部件关联的结构图文档（以.prt.asm结尾）
 	 * 
-	 * @param part
+	 * @param WTPart
+	 * @return EPMDocument
 	 * @throws Exception
 	 */
 	public static EPMDocument getProECADByPart(WTPart part) throws Exception {
@@ -713,40 +720,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * 获取部件的ECAD图纸原理图或PCB
+	 * 获取部件关联的.asm或者.drw文档
 	 * 
-	 * @param part
-	 * @throws Exception
-	 */
-	public static EPMDocument getECADByPart(WTPart part) throws Exception {
-		EPMDocument doc = null;
-		WTPrincipal currentUser = null;
-		try {
-			currentUser = SessionHelper.manager.getPrincipal();
-			SessionHelper.manager.setAdministrator();
-			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-			for (Object object : cadDocumentsAndLinks) {
-				if (object instanceof AssociationLinkObject) {
-					AssociationLinkObject alo = (AssociationLinkObject) object;
-					doc = alo.getCadObject();
-					return doc;
-				}
-			}
-		} catch (WTException e) {
-			e.printStackTrace();
-			throw new Exception("No ECAD Document on Part :" + part.getName());
-		} finally {
-			if (currentUser != null) {
-				SessionHelper.manager.setPrincipal(currentUser.getName());
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * 获取部件的2d图纸
-	 * 
-	 * @param part
+	 * @param WTPart
+	 * @param String
+	 * @return EPMDocument
 	 * @throws Exception
 	 */
 	public static EPMDocument get2DOr3DByPart(WTPart part, String flag) throws Exception {
@@ -782,12 +760,12 @@ public class PartUtil {
 	 * 部件与CAD文档， 说明关系 通过部件获取CAD文档，可能包含3D和2D 1）如果是结构部件，找结构3D图纸 CADCOMPONENT & PROE
 	 * 2）如果是PCBA，找ECAD图纸 3）如果是软件部件，找autocad图纸
 	 * 
-	 * @param part
+	 * @param WTPart
+	 * @return List<EPMDocument>
 	 * @throws Exception
 	 */
 	@SuppressWarnings("deprecation")
 	public static List<EPMDocument> getAllCADByPart(WTPart part) throws Exception {
-		QueryResult qr = null;
 		List<EPMDocument> docs = new ArrayList<EPMDocument>();
 		WTPrincipal currentUser = null;
 		try {
@@ -814,82 +792,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * 部件与CAD文档， 说明关系 通过部件获取CAD文档，可能包含3D和2D 1）如果是结构部件，找结构3D图纸 CADCOMPONENT & PROE
-	 * 2）如果是PCBA，找ECAD图纸 3）如果是软件部件，找autocad图纸
+	 * 获取部件关联的说明方文档
 	 * 
-	 * 这个方法看似未完成
-	 * 
-	 * @param part
-	 * @throws Exception
-	 */
-//	public static EPMDocument getCADByPart(WTPart part) throws Exception {
-//		QueryResult qr = null;
-//		EPMDocument doc = null;
-//		try {
-//			qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
-//
-//			while (qr.hasMoreElements()) {
-//				Object obj = qr.nextElement();
-//				if (obj instanceof EPMDocument) {
-//					doc = (EPMDocument) obj;
-//					IBAUtil iba = new IBAUtil(doc);
-//					String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
-//					String[] split = StringUtils.split(ibaValue, ".");
-//					boolean isAsm = false;// 判断是否为装配图，如果是装配图，则为true
-//					if (split != null && split.length > 0) {
-//						if (StringUtils.isNumeric(split[split.length - 1])) {
-//							isAsm = true;
-//						}
-//					}
-//				}
-//			}
-//		} catch (WTException e) {
-//			e.printStackTrace();
-//			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-//		}
-//		return null;
-//	}
-
-	/**
-	 * 获取部件的AutoCAD图纸
-	 * 
-	 * 这个方法看似未完成
-	 * 
-	 * @param part
-	 * @param isLinkCAD 是否只获取JL或LL的接线图或连线图
-	 * @throws Exception
-	 */
-//	public static List<EPMDocument> getAutoCADByPart(WTPart part, boolean isLinkCAD) throws Exception {
-//		// QueryResult qr = null;
-//		EPMDocument doc = null;
-//		List<EPMDocument> list = new ArrayList<EPMDocument>();
-//		try {
-//			// qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
-//			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-//			// String typeName = PartUtil.getTypeName(part);
-//			for (Object object : cadDocumentsAndLinks) {
-//				if (object instanceof AssociationLinkObject) {
-//					AssociationLinkObject alo = (AssociationLinkObject) object;
-//					doc = alo.getCadObject();
-//					IBAUtil iba = new IBAUtil(doc);
-//					String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
-//					EPMDocumentType docType = doc.getDocType();
-//					EPMAuthoringAppType appType = doc.getAuthoringApplication();
-//				}
-//			}
-//
-//		} catch (WTException e) {
-//			e.printStackTrace();
-//			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-//		}
-//		return list;
-//	}
-
-	/**
-	 * 获取部件的说明文档
-	 * 
-	 * @param part
-	 * @throws Exception
+	 * @param WTPart
+	 * @return List<WTDocument>
+	 * @throws WTException
 	 */
 	public static List<WTDocument> getDescribedDocumentsFromPart(WTPart part) throws WTException {
 		QueryResult qr = null;
@@ -910,7 +817,14 @@ public class PartUtil {
 		return list;
 	}
 
-	/* 获取部件的参考文档 */
+	/**
+	 * 获取部件关联的参考文档
+	 * 
+	 * @param WTPart
+	 * @return List<WTDocument>
+	 * @throws WTException
+	 */
+	@SuppressWarnings("deprecation")
 	public static List<WTDocument> getReferenceDocumentsFromPart(WTPart part) throws WTException {
 		QueryResult qr = null;
 		List<WTDocument> list = new ArrayList<WTDocument>();
@@ -935,9 +849,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 部件与文档是参考关系 通过文档 获取部件
+	 * 获取参考文档关联的部件
 	 * 
-	 * @param doc
+	 * @param WTDocument
+	 * @return List<WTPart>
 	 */
 	public static List<WTPart> getPartByRefrenceDoc(WTDocument doc) {
 		QueryResult qr = null;
@@ -959,9 +874,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * @param WTPart fatherPart, WTPart sonPart 根据父部件和子部件获取 link
-	 * @return WTPart
-	 * @throws Exception
+	 * 获取部件间的关联关系
+	 * 
+	 * @param WTPart
+	 * @param WTPart
+	 * @return WTPartUsageLink
 	 */
 	public static WTPartUsageLink getLinkByPart(WTPart fatherPart, WTPart sonPart) {
 		try {
@@ -980,9 +897,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * @param WTPart 得到link对应的bom子部件
+	 * 根据部件间的关联关系获取子部件
+	 * 
+	 * @param WTPartUsageLink
 	 * @return WTPart
-	 * @throws Exception
 	 */
 	public static WTPart getBomPartBylink(WTPartUsageLink link) {
 		try {
@@ -998,9 +916,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * @param WTPart fatherPart 根据父部件获取 link
-	 * @return WTPart
-	 * @throws Exception
+	 * 获取部件与其所有子部件间的关联关系
+	 * 
+	 * @param WTPart
+	 * @return List<WTPartUsageLink>
 	 */
 	public static List<WTPartUsageLink> getLinksByPart(WTPart fatherPart) {
 		List<WTPartUsageLink> list = new ArrayList<WTPartUsageLink>();
@@ -1017,7 +936,11 @@ public class PartUtil {
 	}
 
 	/**
-	 * 根据part得到其所有子部件,包含数量,自动合并同物料号的单机数量
+	 * 获取部件的子部件和数量关系
+	 * 
+	 * @param WTPart
+	 * @param List<Object[]>
+	 * @return List<Object[]>
 	 */
 	public static List<Object[]> getAllBomByParentPart(WTPart parentPart, List<Object[]> list) {
 		WTPart sPart = null;
@@ -1051,16 +974,15 @@ public class PartUtil {
 		return list;
 	}
 
-
 	/**
-	 * 根据part得到其所有子部件
+	 * 递归获取部件的所有子部件
 	 *
-	 * @param part
-	 * @return
+	 * @param WTPart
+	 * @return List<WTPart>
 	 */
-	private static List<WTPart> getAllBomByPart(WTPart part) {
+	public static List<WTPart> getAllBomByPart(WTPart part) {
 		List<WTPart> localList = new ArrayList<>(); // 局部列表用于递归操作的累积结果
-	
+
 		WTPart sPart = null;
 		QueryResult qr2 = null;
 		try {
@@ -1071,9 +993,9 @@ public class PartUtil {
 				if (qr2.hasMoreElements()) {
 					sPart = (WTPart) qr2.nextElement();
 					localList.add(sPart);
-	
+
 					// 递归调用，将结果合并到局部列表
-					localList.addAll(getAllBomByPartRecursive(sPart));
+					localList.addAll(getAllBomByPart(sPart));
 				}
 			}
 		} catch (WTException e) {
@@ -1085,7 +1007,7 @@ public class PartUtil {
 	/**
 	 * 判断对象是否处于检出状态
 	 * 
-	 * @param workable 被检测的对象
+	 * @param Workable
 	 * @return boolean
 	 */
 	public static boolean isCheckOut(Workable workable) {
@@ -1100,8 +1022,8 @@ public class PartUtil {
 	/**
 	 * 检出部件
 	 * 
-	 * @param part
-	 * @return
+	 * @param Workable
+	 * @return Workable
 	 * @throws WTException
 	 */
 	public static Workable checkoutPart(Workable workable) throws WTException {
@@ -1127,9 +1049,9 @@ public class PartUtil {
 	/**
 	 * 检入部件
 	 * 
-	 * @param partParentPrevious
-	 * @param comment
-	 * @return
+	 * @param WTPart
+	 * @param String
+	 * @return WTPart
 	 * @throws WTException
 	 */
 	public static WTPart checkinPart(WTPart partParentPrevious, String comment) throws WTException {
@@ -1152,9 +1074,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 根据替代料 获取其主料
+	 * 根据替代料获取原部件
 	 * 
-	 * @param part
+	 * @param WTPart
+	 * @return List<WTPart>
 	 * @throws WTException
 	 */
 	public static List<WTPart> getPart(WTPart part) throws WTException {
@@ -1183,8 +1106,12 @@ public class PartUtil {
 	}
 
 	/**
-	 * 根据part得到其所有父部件link
+	 * 根据子部件获取所有父部件之间的关联
+	 * 
+	 * @param WTPart
+	 * @return List<WTPartUsageLink>
 	 */
+	@SuppressWarnings("deprecation")
 	public static List<WTPartUsageLink> getBomLinkByChildPart(WTPart childPart) {
 		List<WTPartUsageLink> list = new ArrayList<WTPartUsageLink>();
 		try {
@@ -1204,9 +1131,14 @@ public class PartUtil {
 		return list;
 	}
 
-	/***
-	 * 复制part @description @param @return WTPart @throws
+	/**
+	 * 复制一个新部件（名称与编号不同）
+	 * 
+	 * @param WTPart
+	 * @param String
+	 * @return WTPart
 	 */
+	@SuppressWarnings("deprecation")
 	public static WTPart copyPart(WTPart part, String partName) {
 		WTPart newPart = null;
 		try {
@@ -1251,10 +1183,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 获取部件的版本号
+	 * 获取部件的完整版本号
 	 * 
-	 * @param part
-	 * @return
+	 * @param WTPart
+	 * @return String
 	 */
 	public static String getVersion(WTPart part) {
 		if (part == null) {
@@ -1266,9 +1198,9 @@ public class PartUtil {
 	}
 
 	/**
-	 * 检出部件是否有其他流出正在运行？
+	 * 校验部件是否正在其他工作流中运行（直接抛出异常？太奇怪了）
 	 * 
-	 * @param list
+	 * @param List<WTPart>
 	 * @throws WTException
 	 */
 	@SuppressWarnings("deprecation")
@@ -1306,8 +1238,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 获取wtpart的单位
+	 * 获取部件的单位
 	 * 
+	 * @param WTPart
+	 * @return String
 	 * @throws WTException
 	 */
 	public static String getUnit(WTPart part) throws WTException {
@@ -1345,10 +1279,10 @@ public class PartUtil {
 	}
 
 	/**
-	 * 替换wtpart的单位
+	 * 修改部件的单位
 	 * 
-	 * @param part
-	 * @param unit 新单位的枚举值
+	 * @param WTPart
+	 * @param String
 	 * @throws WTException
 	 */
 	public static void replaceUnit(WTPart part, String unit) throws WTException {

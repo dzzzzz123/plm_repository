@@ -1,37 +1,20 @@
 package ext.ait.util;
 
-import java.beans.PropertyVetoException;
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.TreeMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.ui.internal.activities.Persistence;
 
 import com.ptc.core.lwc.server.LWCLocalizablePropertyValue;
 import com.ptc.core.lwc.server.LWCTypeDefinition;
 import com.ptc.core.meta.common.IdentifierFactory;
 import com.ptc.core.meta.common.TypeIdentifier;
-import com.ptc.core.meta.type.mgmt.common.TypeDefinitionDefaultView;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinition;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinitionMaster;
 import com.ptc.windchill.enterprise.part.commands.PartDocServiceCommand;
 
-import wt.change2.ChangeHelper2;
-import wt.change2.WTChangeActivity2;
 import wt.content.ApplicationData;
 import wt.content.ContentHelper;
 import wt.content.ContentHolder;
@@ -46,8 +29,6 @@ import wt.epm.EPMDocument;
 import wt.epm.EPMDocumentMaster;
 import wt.epm.EPMDocumentMasterIdentity;
 import wt.epm.EPMDocumentType;
-import wt.epm.structure.EPMDescribeLink;
-import wt.epm.util.EPMSoftTypeServerUtilities;
 import wt.fc.IdentityHelper;
 import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
@@ -66,8 +47,6 @@ import wt.log4j.LogR;
 import wt.org.WTPrincipal;
 import wt.org.WTUser;
 import wt.part.WTPart;
-import wt.part.WTPartDescribeLink;
-import wt.part.WTPartHelper;
 import wt.part.WTPartMaster;
 import wt.part.WTPartMasterIdentity;
 import wt.pds.StatementSpec;
@@ -76,8 +55,6 @@ import wt.query.QuerySpec;
 import wt.query.SearchCondition;
 import wt.services.ServiceProviderHelper;
 import wt.session.SessionHelper;
-import wt.type.TypeDefinitionReference;
-import wt.type.Typed;
 import wt.type.TypedUtilityServiceHelper;
 import wt.util.WTException;
 import wt.vc.Iterated;
@@ -88,8 +65,6 @@ import wt.vc.Versioned;
 import wt.vc.config.ConfigHelper;
 import wt.vc.config.ConfigSpec;
 import wt.vc.config.LatestConfigSpec;
-import wt.vc.wip.WorkInProgressHelper;
-import wt.vc.wip.Workable;
 
 public class CommonUtil {
 
@@ -101,6 +76,7 @@ public class CommonUtil {
 
 	/**
 	 * 转换中文格式，避免中文乱码
+	 * 
 	 * @param value
 	 * @return
 	 * @throws WTException
@@ -154,6 +130,12 @@ public class CommonUtil {
 		return path.toString();
 	}
 
+	/**
+	 * 用来递归获取文件夹完整路径的方法
+	 * 
+	 * @param path
+	 * @param subFolder
+	 */
 	private static void getPath(StringBuffer path, SubFolder subFolder) {
 		path.insert(0, subFolder.getName()).insert(0, "/");
 		SubFolderReference ref = subFolder.getParentFolder();
@@ -165,6 +147,12 @@ public class CommonUtil {
 		}
 	}
 
+	/**
+	 * 更改部件/文档/图纸的名称
+	 * 
+	 * @param mast
+	 * @param name
+	 */
 	public static void changeName(Mastered mast, String name) {
 		WTPrincipal user = null;
 		try {
@@ -201,7 +189,6 @@ public class CommonUtil {
 				try {
 					SessionHelper.manager.setPrincipal(user.getName());
 				} catch (WTException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -209,7 +196,7 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 修改文档、物料、图纸的编码
+	 * 修改文档、物料、图纸的编号
 	 * 
 	 * @param mast
 	 * @param number
@@ -250,7 +237,6 @@ public class CommonUtil {
 				try {
 					SessionHelper.manager.setPrincipal(user.getName());
 				} catch (WTException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -260,11 +246,8 @@ public class CommonUtil {
 	/**
 	 * 获取文档的主要内容
 	 * 
-	 * @author wide at 2016-6-16
-	 * @param wtdocument
+	 * @param holder
 	 * @return
-	 * @throws WTException
-	 * @throws PropertyVetoException
 	 */
 	public static ArrayList<ApplicationData> getSecondaryContent(ContentHolder holder) {
 		ContentHolder contentHolder = null;
@@ -295,26 +278,39 @@ public class CommonUtil {
 				+ revisionControlled.getIterationInfo().getIdentifier().getValue();
 	}
 
+	/**
+	 * 获取对象的oid
+	 * 
+	 * @param obj
+	 * @return
+	 */
 	public static String object2Oid(WTObject obj) {
 		return "OR:" + obj.getClass().getName() + ":" + obj.getPersistInfo().getObjectIdentifier().getId();
 	}
 
+	/**
+	 * 获取oid所对应的对象
+	 * 
+	 * @param oid
+	 * @return
+	 * @throws WTException
+	 */
 	public static WTObject oid2Object(String oid) throws WTException {
 		return (WTObject) factory.getReference(oid).getObject();
 	}
 
 	/**
-	 * 对比是否为最新版本
+	 * 校验对象是否为最新版
 	 * 
 	 * @param interated
 	 * @return
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static boolean isLatestIterated(Iterated interated) throws WTException {
 
 		Iterated localIterated = null;
 		boolean bool = false;
-		Mastered m = null;
 		LatestConfigSpec localLatestConfigSpec = new LatestConfigSpec();
 
 		QueryResult localQueryResult = ConfigHelper.service.filteredIterationsOf(interated.getMaster(),
@@ -337,12 +333,13 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 获取最新小版本
+	 * 获取最新版本的对象
 	 * 
-	 * @param interated
+	 * @param master
 	 * @return
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static Iterated getLatestInterated(Mastered master) throws WTException {
 
 		Iterated localIterated = null;
@@ -366,7 +363,7 @@ public class CommonUtil {
 	/**
 	 * 获取上一个大版本的最新小版本，如果没有上一个大版本，则返回当前版本的最新小版本
 	 * 
-	 * @param part
+	 * @param revisionControlled
 	 * @return
 	 */
 	public static RevisionControlled getLastBigOne(RevisionControlled revisionControlled) {
@@ -382,7 +379,7 @@ public class CommonUtil {
 	/**
 	 * 获取上一个大版本的最新小版本，如果没有上一个大版本，则返回当前版本的最新小版本
 	 * 
-	 * @param part
+	 * @param revisionControlled
 	 * @return
 	 */
 	public static RevisionControlled getLasterBigOne(RevisionControlled revisionControlled) {
@@ -407,9 +404,11 @@ public class CommonUtil {
 	/**
 	 * 根据用户id获取WTUser对象
 	 * 
+	 * @param id
+	 * @return
 	 * @throws WTException
 	 */
-
+	@SuppressWarnings("deprecation")
 	public static WTUser getUserById(String id) throws WTException {
 		WTUser user = null;
 		try {
@@ -446,19 +445,19 @@ public class CommonUtil {
 		if (typeDef.isLatestIteration()) {
 			id = typeDef.getPersistInfo().getObjectIdentifier().getId();
 		}
-		LOGGER.debug("###[" + id + "] isInheritedDomain --->" + typeDef.isInheritedDomain() + 
-						" ;;;isUserAttributeable "+ typeDef.isUserAttributeable() + 
-						";;;; isLatestIteration " + typeDef.isLatestIteration());
+		LOGGER.debug("###[" + id + "] isInheritedDomain --->" + typeDef.isInheritedDomain() + " ;;;isUserAttributeable "
+				+ typeDef.isUserAttributeable() + ";;;; isLatestIteration " + typeDef.isLatestIteration());
 		return id;
 	}
 
 	/**
-	 * 通过高级查询获取文档类型的ID
+	 * 通过高级查询获取文档类型的对象
 	 * 
 	 * @param name
 	 * @return
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static WTTypeDefinition getTypeDefinitionByName(String name) throws WTException {
 		WTTypeDefinition type = null;
 		QuerySpec qs = new QuerySpec();
@@ -492,6 +491,7 @@ public class CommonUtil {
 	 * @return
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static ArrayList<WTDocument> getDepByDoc(WTDocument doc) throws WTException {
 		ArrayList<WTDocument> doclist = new ArrayList<WTDocument>();
 		try {
@@ -502,7 +502,6 @@ public class CommonUtil {
 			while (qr.hasMoreElements()) {
 				WTDocumentDependencyLink link = (WTDocumentDependencyLink) qr.nextElement();
 				WTDocument depByDoc = (WTDocument) link.getRoleAObject();
-				LOGGER.debug("文档[" + doc.getNumber() + "]被参考文档为--->" + depByDoc.getNumber());
 				doclist.add(depByDoc);
 			}
 		} catch (Exception e) {
@@ -518,6 +517,7 @@ public class CommonUtil {
 	 * @return
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static String getTypeDisplayName(String key) throws WTException {
 		String typeDisplayName = "";
 		try {
@@ -556,7 +556,14 @@ public class CommonUtil {
 		}
 	}
 
-
+	/**
+	 * 得到指定文件夹的对象，如果没有则创建该文件夹（尚不明晰，看上去并不那么好用）
+	 * 
+	 * @param strFolder
+	 * @param wtContainer
+	 * @return
+	 * @throws WTException
+	 */
 	public static Folder getFolder(String strFolder, WTContainer wtContainer) throws WTException {
 		WTPrincipal curUser = SessionHelper.manager.getPrincipal();
 		SessionHelper.manager.setAdministrator();
@@ -573,6 +580,14 @@ public class CommonUtil {
 		return folder;
 	}
 
+	/**
+	 * 根据对象类型和类型获取对象（暂不清楚）
+	 * 
+	 * @param queryClass
+	 * @param type
+	 * @return
+	 * @throws Exception
+	 */
 	public static QueryResult findObjectByType(Class queryClass, String type) throws Exception {
 		IdentifierFactory identifier_factory = (IdentifierFactory) ServiceProviderHelper
 				.getService(IdentifierFactory.class, "logical");
@@ -586,6 +601,14 @@ public class CommonUtil {
 		return qr;
 	}
 
+	/**
+	 * 根据容器的名称获取容器对象
+	 * 
+	 * @param containerName
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("deprecation")
 	public static WTContainer getContainer(String containerName) throws Exception {
 		QuerySpec qs = new QuerySpec(WTContainer.class);
 		SearchCondition sc = new SearchCondition(WTContainer.class, WTContainer.NAME, "=", containerName);
@@ -599,8 +622,12 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 获取最新版本的文档
+	 * 根据编号获取对应最新版本的文档
+	 * 
+	 * @param number
+	 * @return
 	 */
+	@SuppressWarnings("deprecation")
 	public static WTDocument getDoc(String number) {
 		try {
 			if (StringUtils.isBlank(number)) {
@@ -621,6 +648,14 @@ public class CommonUtil {
 		return null;
 	}
 
+	/**
+	 * 根据VR获取对应版本的对象
+	 * 
+	 * @param queryClass
+	 * @param vr
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
 	public static Object getObjByVR(Class queryClass, String vr) {
 		try {
 			if (StringUtils.isBlank(vr)) {
@@ -641,7 +676,14 @@ public class CommonUtil {
 
 	}
 
-
+	/**
+	 * 根据编号获取对象
+	 * 
+	 * @param number
+	 * @param queryClass
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
 	public static Object getObjByNumber(String number, Class queryClass) {
 		try {
 			if (StringUtils.isBlank(number)) {
@@ -660,10 +702,10 @@ public class CommonUtil {
 		return null;
 	}
 
-
 	/**
-	 * 获取当前组织
+	 * 根据组织名称获取组织对象
 	 * 
+	 * @param orgName
 	 * @return
 	 */
 	public static OrgContainer getOrgContainer(String orgName) {

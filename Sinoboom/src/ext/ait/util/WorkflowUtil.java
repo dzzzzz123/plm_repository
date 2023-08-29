@@ -7,7 +7,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Vector;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 
 import com.ptc.netmarkets.model.NmOid;
@@ -18,21 +17,17 @@ import wt.access.AccessControlHelper;
 import wt.access.AccessPermission;
 import wt.access.AdHocAccessKey;
 import wt.access.AdHocControlled;
-import wt.change2.ChangeException2;
 import wt.change2.ChangeHelper2;
 import wt.change2.VersionableChangeItem;
 import wt.change2.WTChangeActivity2;
 import wt.change2.WTChangeOrder2;
 import wt.change2.WTChangeReview;
-import wt.doc.WTDocument;
 import wt.enterprise.RevisionControlled;
 import wt.fc.ObjectReference;
 import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
-import wt.fc.ReferenceFactory;
 import wt.fc.WTObject;
-import wt.fc.WTReference;
 import wt.httpgw.URLFactory;
 import wt.log4j.LogR;
 import wt.maturity.MaturityHelper;
@@ -68,10 +63,10 @@ public class WorkflowUtil {
 	private static Logger LOGGER = LogR.getLogger(WorkflowUtil.class.getName());
 
 	/**
-	 * 获取升级流程中被评审的对象
+	 * 获取升级请求中被升级的对象
 	 * 
-	 * @param pn
-	 * @return
+	 * @param PromotionNotice
+	 * @return ArrayList<WTObject>
 	 * @throws WTException
 	 */
 	public static ArrayList<WTObject> getTargerObjectByPromotionNotices(PromotionNotice pn) throws WTException {
@@ -86,10 +81,10 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 通过流程模板中的Self变量，获取流程实例
+	 * 根据流程中的self获取WfProcess对象
 	 * 
-	 * @param self
-	 * @return
+	 * @param ObjectReference
+	 * @return WfProcess
 	 */
 	public static WfProcess getProcess(ObjectReference self) {
 		Persistable persistable = self.getObject();
@@ -127,22 +122,22 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 通过任务获取流程实例
+	 * 通过任务（WorkItem）获取WfProcess对象
 	 * 
-	 * @param wi
-	 * @return
+	 * @param WorkItem
+	 * @return WfProcess
 	 */
 	public static WfProcess getProcess(WorkItem wi) {
 		return (WfProcess) wi.getSource().getObject();
 	}
 
 	/**
-	 * 通过被评审对象获取流程对象
+	 * 根据评审对象（PBO）获取WfProcess对象
 	 * 
-	 * @param obj
-	 * @return
-	 * @throws WTException
+	 * @param WTObject
+	 * @return WfProcess
 	 */
+	@SuppressWarnings("deprecation")
 	public static WfProcess getProcessByPbo(WTObject obj) {
 		WfProcess process = null;
 		try {
@@ -188,11 +183,11 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 保存流程变量
+	 * 将自定义的变量添加到流程中去
 	 * 
-	 * @param self
-	 * @param key
-	 * @param value
+	 * @param ObjectReference
+	 * @param String
+	 * @param Object
 	 * @throws WTException
 	 */
 	public static void setProcessValue(ObjectReference self, String key, Object value) throws WTException {
@@ -211,23 +206,21 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 设置活动变量的值
+	 * 将自定义的变量加到活动中去
 	 * 
-	 * @param self
-	 * @param key
-	 * @param obj
+	 * @param ObjectReference
+	 * @param String
+	 * @param Object
 	 * @throws WTException
 	 */
 	public static void setActivityValue(ObjectReference self, String key, Object obj) throws WTException {
 		try {
 			WfExecutionObject p = (WfExecutionObject) self.getObject();
 			ProcessData data = p.getContext();
-			// LOGGER.debug("属性["+key+"]原来的值为-->"+data.getValue(key));
 			data.setValue(key, obj);
 			PersistenceHelper.manager.modify(p);
 			PersistenceHelper.manager.refresh(p);
 		} catch (WTException e) {
-			// TODO Auto-generated catch block
 			LOGGER.error("设置流程变量" + key + "出错");
 			e.printStackTrace();
 			throw new WTException(e);
@@ -236,11 +229,12 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 通过流程获取流程的所有任务
+	 * 获取流程中所有的任务
 	 * 
-	 * @param process
-	 * @throws WTException
+	 * @param WfProcess
+	 * @return ArrayList<WorkItem>
 	 */
+	@SuppressWarnings("deprecation")
 	public static ArrayList<WorkItem> getWorkItemByProcess(WfProcess process) {
 		ArrayList<WorkItem> list = new ArrayList<WorkItem>();
 		if (process == null) {
@@ -275,8 +269,8 @@ public class WorkflowUtil {
 	/**
 	 * 获取流程中的所有活动
 	 * 
-	 * @param process
-	 * @return
+	 * @param 获取流程中所有活动
+	 * @return ArrayList<WfAssignedActivity>
 	 */
 	public static ArrayList<WfAssignedActivity> getWfAssignedActivitys(WfProcess process) {
 		ArrayList<WfAssignedActivity> list = new ArrayList<WfAssignedActivity>();
@@ -296,11 +290,13 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 通过流程获取流程的所有任务
+	 * 获取流程中所有的任务
 	 * 
-	 * @param process
+	 * @param WfProcess
+	 * @return ArrayList<WorkItem>
 	 * @throws WTException
 	 */
+	@SuppressWarnings("deprecation")
 	public static ArrayList<WorkItem> getInProcessWorkItemByProcess(WfProcess process) throws WTException {
 		ArrayList<WorkItem> list = new ArrayList<WorkItem>();
 		if (process == null) {
@@ -319,7 +315,6 @@ public class WorkflowUtil {
 			qs.appendAnd();
 			qs.appendWhere(new SearchCondition(WorkItem.class, WorkItem.STATUS, SearchCondition.NOT_EQUAL, "COMPLETED"),
 					workItemIndex);
-			// LOGGER.debug("getWorkItemByProcess sql where -->"+qs.getWhere());
 			QueryResult qr = PersistenceHelper.manager.find(qs);
 			while (qr != null && qr.hasMoreElements()) {
 				Object[] objs = (Object[]) qr.nextElement();
@@ -328,8 +323,6 @@ public class WorkflowUtil {
 					list.add((WorkItem) obj);
 				}
 			}
-			// LOGGER.debug("process name :"+process.getName()+"获取的未完成任务个数有--->
-			// "+list.size());
 			return list;
 		} catch (Exception e) {
 			throw new WTException(e);
@@ -337,18 +330,17 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 获取未完成的所有流程任务
+	 * 获取全局未完成的所有任务
 	 * 
-	 * @param process
-	 * @throws WTException
+	 * @return ArrayList<WorkItem>
 	 */
+	@SuppressWarnings("deprecation")
 	public static ArrayList<WorkItem> getUnfinishedWorkItem() {
 		ArrayList<WorkItem> list = new ArrayList<WorkItem>();
 		try {
 			QuerySpec qs = new QuerySpec(WorkItem.class);
 			qs.appendWhere(
 					new SearchCondition(WorkItem.class, WorkItem.STATUS, SearchCondition.NOT_EQUAL, "COMPLETED"));
-			// LOGGER.debug("getWorkItemByProcess sql where -->"+qs.getWhere());
 			QueryResult qr = PersistenceHelper.manager.find(qs);
 			while (qr != null && qr.hasMoreElements()) {
 				Object obj = (Object) qr.nextElement();
@@ -356,7 +348,6 @@ public class WorkflowUtil {
 					list.add((WorkItem) obj);
 				}
 			}
-			// LOGGER.debug("未完成的任务个数有---> "+list.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -364,10 +355,10 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 获取任务的URL
+	 * 获取任务对应的URL
 	 * 
-	 * @param wi
-	 * @return
+	 * @param WorkItem
+	 * @return String
 	 */
 	public static String getWorkItemUrl(WorkItem wi) {
 		String url = "";
@@ -391,13 +382,18 @@ public class WorkflowUtil {
 		LOGGER.debug("获取任务[" + wi.toString() + "]URL为---->" + url);
 		return url;
 	}
-	
-	
+
+	/**
+	 * 获取已持久化对象对应的URL
+	 * 
+	 * @param Persistable
+	 * @return String
+	 */
 	public static String getPersUrl(Persistable persistable) {
 		String url = "";
-		try {	
-			//http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
-				 
+		try {
+			// http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
+
 			URLFactory factory = new URLFactory();
 			String resource = "app/#ptc1/tcomp/infoPage";
 			HashMap<String, String> map = new HashMap<String, String>();
@@ -415,6 +411,12 @@ public class WorkflowUtil {
 		return url;
 	}
 
+	/**
+	 * 从self中获取工作流中所有任务的URL
+	 * 
+	 * @param ObjectReference
+	 * @return String
+	 */
 	public static String getWorkItemUrl(ObjectReference self) {
 		String result = "";
 		Persistable persistable = self.getObject();
@@ -447,6 +449,12 @@ public class WorkflowUtil {
 		return result;
 	}
 
+	/**
+	 * 获取任务的审计对象
+	 * 
+	 * @param WorkItem
+	 * @return WfVotingEventAudit
+	 */
 	@SuppressWarnings("deprecation")
 	public static WfVotingEventAudit getVoting(WorkItem wi) {
 		WfVotingEventAudit wa = null;
@@ -466,17 +474,19 @@ public class WorkflowUtil {
 		return wa;
 	}
 
-
 	/**
 	 * 赋予用户流程编辑权限
+	 * 
+	 * @param WfProcess
 	 */
+	@SuppressWarnings("deprecation")
 	public static void giveAccessWorkflow(WfProcess process) {
 		try {
 			WTPrincipalReference ref = SessionHelper.manager.getPrincipalReference();
-			Vector vector = new Vector();
+			Vector<AccessPermission> vector = new Vector<>();
 			vector.add(AccessPermission.MODIFY);
-			AdHocControlled adhoccontrolled = AccessControlHelper.manager.addPermissions((AdHocControlled) process, ref,
-					vector, AdHocAccessKey.WNC_ACCESS_CONTROL);
+			AccessControlHelper.manager.addPermissions((AdHocControlled) process, ref, vector,
+					AdHocAccessKey.WNC_ACCESS_CONTROL);
 		} catch (Exception e) {
 			LOGGER.error(">>>>>>>>>>>>>>>>>赋予权限失败");
 			e.printStackTrace();
@@ -484,29 +494,30 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 收回用户流程编辑权限
+	 * 收回/移除用户流程编辑权限
+	 * 
+	 * @param WfProcess
 	 */
+	@SuppressWarnings("deprecation")
 	public static void removeAccessWorkflow(WfProcess process) {
 		try {
 			WTPrincipalReference ref = SessionHelper.manager.getPrincipalReference();
-			Vector vector = new Vector();
+			Vector<AccessPermission> vector = new Vector<>();
 			vector.add(AccessPermission.MODIFY);
-			AdHocControlled adhoccontrolled = AccessControlHelper.manager.removePermissions((AdHocControlled) process,
-					ref, vector, AdHocAccessKey.WNC_ACCESS_CONTROL);
+			AccessControlHelper.manager.removePermissions((AdHocControlled) process, ref, vector,
+					AdHocAccessKey.WNC_ACCESS_CONTROL);
 		} catch (Exception e) {
 			LOGGER.error(">>>>>>>>>>>>>>>>>收回权限失败");
 			e.printStackTrace();
 		}
 	}
 
-
 	/**
-	 * 获取流程任务的路由选择
+	 * 获取任务的路由选择
 	 * 
-	 * @param itemList
-	 * @param actName
-	 * @return
-	 * @throws WTException
+	 * @param ArrayList<WorkItem>
+	 * @param String
+	 * @return String
 	 */
 	public static String getEvent(ArrayList<WorkItem> itemList, String actName) {
 		String voting = "";
@@ -541,12 +552,11 @@ public class WorkflowUtil {
 		return voting;
 	}
 
-
 	/**
 	 * 获取同一个活动下的所有任务
 	 * 
-	 * @param wi
-	 * @return
+	 * @param WfAssignedActivity
+	 * @return ArrayList<WorkItem>
 	 */
 	@SuppressWarnings("deprecation")
 	public static ArrayList<WorkItem> getWorkItems(WfAssignedActivity waa) {
@@ -566,14 +576,18 @@ public class WorkflowUtil {
 		return list;
 	}
 
+	/**
+	 * 获取同一个活动下的所有任务
+	 * 
+	 * @param WfAssignedActivity
+	 * @return ArrayList<WorkItem>
+	 */
 	public static ArrayList<WorkItem> getActivityWorkItems(WfAssignedActivity wfActivity) {
 		ArrayList<WorkItem> list = new ArrayList<WorkItem>();
 		try {
 			Enumeration activityEnum = wfActivity.getAllAssignments();
 			while (activityEnum.hasMoreElements()) {
 				WfAssignment assignment = (WfAssignment) activityEnum.nextElement();
-				LOGGER.debug(
-						"getActivityWorkItems by getAllAssignments------------>" + assignment.getIdentity().toString());
 				if (assignment != null) {
 					QueryResult qr = PersistenceHelper.manager.navigate(assignment, WorkItemLink.WORK_ITEM_ROLE,
 							WorkItemLink.class);
@@ -586,8 +600,6 @@ public class WorkflowUtil {
 			Enumeration activityEnum1 = wfActivity.getAssignments();
 			while (activityEnum1.hasMoreElements()) {
 				WfAssignment assignment = (WfAssignment) activityEnum1.nextElement();
-				LOGGER.debug(
-						"getActivityWorkItems by getAssignments------------>" + assignment.getIdentity().toString());
 				if (assignment != null) {
 					QueryResult qr = PersistenceHelper.manager.navigate(assignment, "workItem", WorkItemLink.class);
 					if (qr.size() > 0) {
@@ -605,13 +617,14 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 获取流程模板中预设的活动参与者
+	 * 获取流程模板中预设的参与者
 	 * 
-	 * @param template
-	 * @return
+	 * @param WfProcessTemplate
+	 * @return Vector<WTPrincipalReference>
 	 */
-	public static Vector getTemplateUsers(WfProcessTemplate template) {
-		Vector vector = new Vector();
+	@SuppressWarnings("deprecation")
+	public static Vector<WTPrincipalReference> getTemplateUsers(WfProcessTemplate template) {
+		Vector<WTPrincipalReference> vector = new Vector<>();
 		/**
 		 * 查询模板中所有预设的活动
 		 */
@@ -638,13 +651,12 @@ public class WorkflowUtil {
 		return vector;
 	}
 
-	/***
-	 * 获取审阅单下的受影响部件、变更通知/变更任务的产生的对象、基线的部件
+	/**
+	 * 获取审阅当中受影响的部件/产生后的部件/基线的部件
 	 * 
-	 * @param primaryBusinessObject
-	 * @return
-	 * @throws WTException
-	 * @throws ChangeException2
+	 * @param WTObject
+	 * @return ArrayList<WTPart>
+	 * @throws Exception
 	 */
 	public static ArrayList<WTPart> getTargerParts(WTObject primaryBusinessObject) throws Exception {
 		ArrayList<WTPart> list = new ArrayList<WTPart>();
@@ -695,11 +707,11 @@ public class WorkflowUtil {
 		return list;
 	}
 
-	/***
-	 * 根据持久化对象获取流程实例
+	/**
+	 * 根据持久化对象获取相关联的流程
 	 * 
-	 * @param obj
-	 * @return
+	 * @param Persistable
+	 * @return WfProcess
 	 * @throws Exception
 	 */
 	public static WfProcess getRelatedProcess(Persistable obj) throws Exception {
@@ -732,10 +744,10 @@ public class WorkflowUtil {
 	 * 获取审阅/变更目标对象
 	 * 
 	 * @param <T>
-	 * @param primaryBusinessObject 流程的primaryBusinessObject
-	 * @param type                  GetTargerObjectUtil.AffectedObjects受影响对象/GetTargerObjectUtil.ResultingObjects产生的对象
-	 * @param clazz                 WTPart.class/WTDocument.class
-	 * @return
+	 * @param WTObject 流程的primaryBusinessObject
+	 * @param String   GetTargerObjectUtil.AffectedObjects受影响对象/GetTargerObjectUtil.ResultingObjects产生的对象
+	 * @param clazz    WTPart.class/WTDocument.class
+	 * @return ArrayList<T>
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")

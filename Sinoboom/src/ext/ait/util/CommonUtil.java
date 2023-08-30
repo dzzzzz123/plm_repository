@@ -1,5 +1,6 @@
 package ext.ait.util;
 
+import java.util.Enumeration;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
@@ -13,7 +14,6 @@ import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinition;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinitionMaster;
 
 import wt.enterprise.RevisionControlled;
-import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
 import wt.folder.Folder;
@@ -25,6 +25,8 @@ import wt.inf.container.OrgContainer;
 import wt.inf.container.WTContainer;
 import wt.inf.container.WTContainerRef;
 import wt.log4j.LogR;
+import wt.org.OrganizationServicesHelper;
+import wt.org.WTGroup;
 import wt.org.WTPrincipal;
 import wt.org.WTUser;
 import wt.pds.StatementSpec;
@@ -35,9 +37,6 @@ import wt.services.ServiceProviderHelper;
 import wt.session.SessionHelper;
 import wt.type.TypedUtilityServiceHelper;
 import wt.util.WTException;
-import wt.vc.VersionIdentifier;
-import wt.vc.Versioned;
-import wt.vc.config.LatestConfigSpec;
 
 public class CommonUtil {
 
@@ -311,59 +310,6 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 根据VR获取对应版本的对象
-	 * 
-	 * @param queryClass
-	 * @param vr
-	 * @return
-	 */
-	@SuppressWarnings("deprecation")
-	public static Object getObjByVR(Class queryClass, String vr) {
-		try {
-			if (StringUtils.isBlank(vr)) {
-				return null;
-			}
-			QuerySpec qs = new QuerySpec(queryClass);
-			qs.appendWhere(
-					new SearchCondition(queryClass, "iterationInfo.branchId", SearchCondition.EQUAL, Long.valueOf(vr)));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			qr = new LatestConfigSpec().process(qr);
-			if (qr.hasMoreElements()) {
-				return qr.nextElement();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * 根据编号获取对象
-	 * 
-	 * @param number
-	 * @param queryClass
-	 * @return
-	 */
-	@SuppressWarnings("deprecation")
-	public static Object getObjByNumber(String number, Class queryClass) {
-		try {
-			if (StringUtils.isBlank(number)) {
-				return null;
-			}
-			QuerySpec qs = new QuerySpec(queryClass);
-			qs.appendWhere(new SearchCondition(queryClass, "master>number", SearchCondition.EQUAL, number.trim()));
-			QueryResult qr = PersistenceHelper.manager.find(qs);
-			qr = new LatestConfigSpec().process(qr);
-			if (qr.hasMoreElements()) {
-				return qr.nextElement();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
 	 * 根据组织名称获取组织对象
 	 * 
 	 * @param orgName
@@ -388,81 +334,57 @@ public class CommonUtil {
 	}
 
 	/**
-	 * 根据对象的number找到最新版本的对象
-	 *
-	 * @author gongke
-	 * @param number    要查询的对象的编号
-	 * @param thisClass class对象
-	 * @return 由number标识的最新版本对象
+	 * 根据用户名称/用户全名获取用户对象
+	 * 
+	 * @param String
+	 * @param boolean
+	 * @return WTUser
 	 */
-	public static Persistable getLatestPersistableByNumber(String number, Class thisClass) {
-		Persistable persistable = null;
+	@SuppressWarnings("deprecation")
+	public static WTUser getUserByName(String name, boolean IsFull) {
+		String parm = IsFull ? WTUser.FULL_NAME : WTUser.NAME;
+		if (StringUtils.isBlank(name)) {
+			return null;
+		}
 		try {
-			int[] index = { 0 };
-			QuerySpec qs = new QuerySpec(thisClass);
-			String attribute = (String) thisClass.getField("NUMBER").get(thisClass);
-			qs.appendWhere(new SearchCondition(thisClass, attribute, SearchCondition.EQUAL, number), index);
-			QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
-			LatestConfigSpec configSpec = new LatestConfigSpec();
-			qr = configSpec.process(qr);
-			if (qr != null && qr.hasMoreElements()) {
-				persistable = (Persistable) qr.nextElement();
+			Enumeration enumUser = OrganizationServicesHelper.manager.findUser(parm, name.trim());
+			while (enumUser.hasMoreElements()) {
+				return (WTUser) enumUser.nextElement();
 			}
-		} catch (QueryException e) {
-			e.printStackTrace();
-		} catch (WTException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return persistable;
+		return null;
 	}
 
 	/**
-	 * 根据对象的number verision找到最新版本的对象
-	 *
-	 * @author gongke
-	 * @param number    要查询的对象的编号
-	 * @param thisClass class对象
-	 * @return 由number标识的最新版本对象
+	 * 根据组名获取组对象
+	 * 
+	 * @param String
+	 * @return WTGroup
 	 */
-	public static Persistable getLatestPersistableByNumberAndVersion(String number, String version, Class thisClass) {
-		Persistable persistable = null;
+	public static WTGroup queryGroupByName(String groupName) {
 		try {
-			int[] index = { 0 };
-			QuerySpec qs = new QuerySpec(thisClass);
-			String attribute = (String) thisClass.getField("NUMBER").get(thisClass);
-			qs.appendWhere(new SearchCondition(thisClass, attribute, SearchCondition.EQUAL, number), index);
-			qs.appendAnd();
-			qs.appendWhere(new SearchCondition(thisClass,
-					Versioned.VERSION_IDENTIFIER + "." + VersionIdentifier.VERSIONID, SearchCondition.EQUAL, version),
-					index);
-			QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
-			LatestConfigSpec configSpec = new LatestConfigSpec();
-			qr = configSpec.process(qr);
-			if (qr != null && qr.hasMoreElements()) {
-				persistable = (Persistable) qr.nextElement();
+			ChangeSession.administratorSession();
+			if (StringUtils.isBlank(groupName)) {
+				return null;
 			}
-		} catch (QueryException e) {
-			e.printStackTrace();
+			QuerySpec qs = new QuerySpec(WTGroup.class);
+			SearchCondition sc = new SearchCondition(WTGroup.class, WTGroup.NAME, SearchCondition.EQUAL,
+					groupName.trim());
+			int[] index = { 0 };
+			qs.appendWhere(sc, index);
+			QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
+			while (qr.hasMoreElements()) {
+				WTGroup group = (WTGroup) qr.nextElement();
+				return group;
+			}
 		} catch (WTException e) {
 			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
+		} finally {
+			ChangeSession.goPreviousSession();
 		}
-		return persistable;
+		return null;
 	}
 
 }

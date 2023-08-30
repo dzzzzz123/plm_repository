@@ -1,9 +1,12 @@
 package ext.ait.util;
 
+import java.util.HashMap;
+
 import org.apache.commons.lang3.StringUtils;
 
 import com.ptc.core.meta.type.mgmt.common.TypeDefinitionDefaultView;
 import com.ptc.core.meta.type.mgmt.server.impl.WTTypeDefinition;
+import com.ptc.netmarkets.model.NmOid;
 
 import wt.doc.WTDocument;
 import wt.doc.WTDocumentMaster;
@@ -13,17 +16,21 @@ import wt.epm.EPMDocumentMaster;
 import wt.epm.EPMDocumentMasterIdentity;
 import wt.epm.util.EPMSoftTypeServerUtilities;
 import wt.fc.IdentityHelper;
+import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
 import wt.fc.ReferenceFactory;
 import wt.fc.WTObject;
 import wt.folder.Folder;
+import wt.httpgw.URLFactory;
 import wt.lifecycle.LifeCycleManaged;
 import wt.lifecycle.State;
 import wt.org.WTPrincipal;
 import wt.part.WTPart;
 import wt.part.WTPartMaster;
 import wt.part.WTPartMasterIdentity;
+import wt.pds.StatementSpec;
+import wt.query.QueryException;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
 import wt.session.SessionHelper;
@@ -31,6 +38,8 @@ import wt.type.TypeDefinitionReference;
 import wt.util.WTException;
 import wt.util.WTPropertyVetoException;
 import wt.vc.Mastered;
+import wt.vc.VersionIdentifier;
+import wt.vc.Versioned;
 import wt.vc.baseline.ManagedBaseline;
 import wt.vc.config.LatestConfigSpec;
 import wt.vc.wip.CheckoutLink;
@@ -38,8 +47,6 @@ import wt.vc.wip.WorkInProgressHelper;
 import wt.vc.wip.Workable;
 
 public class PersistenceUtil {
-
-	private static ReferenceFactory factory = new ReferenceFactory();
 
 	/**
 	 * @description 得到对象的自定义/内部名称
@@ -272,7 +279,9 @@ public class PersistenceUtil {
 	 * @return String
 	 */
 	public static String object2Oid(WTObject obj) {
-		return "OR:" + obj.getClass().getName() + ":" + obj.getPersistInfo().getObjectIdentifier().getId();
+		String className = obj.getClass().getName();
+		String oid = String.valueOf(obj.getPersistInfo().getObjectIdentifier().getId());
+		return "OR:" + className + ":" + oid;
 	}
 
 	/**
@@ -283,7 +292,9 @@ public class PersistenceUtil {
 	 * @throws WTException
 	 */
 	public static WTObject oid2Object(String oid) throws WTException {
-		return (WTObject) factory.getReference(oid).getObject();
+		ReferenceFactory factory = new ReferenceFactory();
+		Persistable persistable = factory.getReference(oid).getObject();
+		return (WTObject) persistable;
 	}
 
 	/**
@@ -337,5 +348,111 @@ public class PersistenceUtil {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	/**
+	 * 获取已持久化对象对应的URL
+	 * 
+	 * @param Persistable
+	 * @return String
+	 */
+	public static String getPersUrl(Persistable persistable) {
+		String url = "";
+		try {
+			// http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
+
+			URLFactory factory = new URLFactory();
+			String resource = "app/#ptc1/tcomp/infoPage";
+			HashMap<String, String> map = new HashMap<String, String>();
+			NmOid oid = new NmOid();
+			oid.setOid(persistable.getPersistInfo().getObjectIdentifier());
+			map.put("oid", oid.toString());
+			map.put("u8", "1");
+			String ref1 = factory.getHREF(resource, map);
+			if (ref1 != null && ref1.trim().length() > 0) {
+				url = ref1;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return url;
+	}
+
+	/**
+	 * 根据对象的number找到最新版本的对象
+	 *
+	 * @author gongke
+	 * @param number    要查询的对象的编号
+	 * @param thisClass class对象
+	 * @return 由number标识的最新版本对象
+	 */
+	public static Persistable getLatestPersistableByNumber(String number, Class thisClass) {
+		Persistable persistable = null;
+		try {
+			int[] index = { 0 };
+			QuerySpec qs = new QuerySpec(thisClass);
+			String attribute = (String) thisClass.getField("NUMBER").get(thisClass);
+			qs.appendWhere(new SearchCondition(thisClass, attribute, SearchCondition.EQUAL, number), index);
+			QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
+			LatestConfigSpec configSpec = new LatestConfigSpec();
+			qr = configSpec.process(qr);
+			if (qr != null && qr.hasMoreElements()) {
+				persistable = (Persistable) qr.nextElement();
+			}
+		} catch (QueryException e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
+		}
+		return persistable;
+	}
+
+	/**
+	 * 根据对象的number verision找到最新版本的对象
+	 *
+	 * @author gongke
+	 * @param number    要查询的对象的编号
+	 * @param thisClass class对象
+	 * @return 由number标识的最新版本对象
+	 */
+	public static Persistable getLatestPersistableByNumberAndVersion(String number, String version, Class thisClass) {
+		Persistable persistable = null;
+		try {
+			int[] index = { 0 };
+			QuerySpec qs = new QuerySpec(thisClass);
+			String attribute = (String) thisClass.getField("NUMBER").get(thisClass);
+			qs.appendWhere(new SearchCondition(thisClass, attribute, SearchCondition.EQUAL, number), index);
+			qs.appendAnd();
+			qs.appendWhere(new SearchCondition(thisClass,
+					Versioned.VERSION_IDENTIFIER + "." + VersionIdentifier.VERSIONID, SearchCondition.EQUAL, version),
+					index);
+			QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
+			LatestConfigSpec configSpec = new LatestConfigSpec();
+			qr = configSpec.process(qr);
+			if (qr != null && qr.hasMoreElements()) {
+				persistable = (Persistable) qr.nextElement();
+			}
+		} catch (QueryException e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
+		}
+		return persistable;
 	}
 }

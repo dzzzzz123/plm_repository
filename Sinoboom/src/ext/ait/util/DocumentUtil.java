@@ -33,8 +33,6 @@ import wt.vc.config.LatestConfigSpec;
 
 public class DocumentUtil {
 
-	private static EPMDocumentType CADDRAWING = EPMDocumentType.toEPMDocumentType("CADDRAWING");
-
 	/**
 	 * 获取被参考文档
 	 * 
@@ -89,6 +87,33 @@ public class DocumentUtil {
 	}
 
 	/**
+	 * 根据编号获取最新版本的EPM文档
+	 * 
+	 * @param String
+	 * @return EPMDocument
+	 */
+	@SuppressWarnings("deprecation")
+	public static EPMDocument getEPMByNumber(String number) {
+		try {
+			if (StringUtils.isBlank(number)) {
+				return null;
+			}
+			QuerySpec qs = new QuerySpec(EPMDocument.class);
+			qs.appendWhere(
+					new SearchCondition(EPMDocument.class, EPMDocument.NUMBER, SearchCondition.EQUAL, number.trim()));
+			QueryResult qr = PersistenceHelper.manager.find(qs);
+			qr = new LatestConfigSpec().process(qr);
+			if (qr.hasMoreElements()) {
+				EPMDocument doc = (EPMDocument) qr.nextElement();
+				return doc;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
 	 * 根据3D获取2D drawing
 	 * 
 	 * @param WTPart
@@ -96,6 +121,7 @@ public class DocumentUtil {
 	 * @throws Exception
 	 */
 	public static List<EPMDocument> get2DDrawingByWTPart(WTPart part) throws Exception {
+		EPMDocumentType cadDrawing = EPMDocumentType.toEPMDocumentType("CADDRAWING");
 		List<EPMDocument> result = new ArrayList<>();
 		try {
 			QueryResult qr = PartDocServiceCommand.getAssociatedCADDocuments(part);// CAD文档
@@ -104,7 +130,7 @@ public class DocumentUtil {
 				if (obj instanceof EPMDocument) {
 					EPMDocument doc = (EPMDocument) obj;
 					EPMDocumentType docType = doc.getDocType();
-					if (CADDRAWING.equals(docType)) {
+					if (cadDrawing.equals(docType)) {
 						result.add(doc);
 					}
 				}

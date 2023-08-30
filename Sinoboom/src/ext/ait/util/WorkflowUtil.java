@@ -11,8 +11,6 @@ import java.util.Vector;
 import org.apache.logging.log4j.Logger;
 
 import com.ptc.netmarkets.model.NmOid;
-import com.ptc.netmarkets.util.beans.NmURLFactoryBean;
-import com.ptc.netmarkets.util.misc.NetmarketURL;
 
 import wt.access.AccessControlHelper;
 import wt.access.AccessPermission;
@@ -36,15 +34,12 @@ import wt.maturity.Promotable;
 import wt.maturity.PromotionNotice;
 import wt.maturity.PromotionTarget;
 import wt.org.WTPrincipalReference;
-import wt.part.WTPart;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
 import wt.session.SessionHelper;
 import wt.util.CollationKeyFactory;
 import wt.util.SortedEnumeration;
 import wt.util.WTException;
-import wt.vc.baseline.BaselineHelper;
-import wt.vc.baseline.ManagedBaseline;
 import wt.workflow.definer.WfAssignedActivityTemplate;
 import wt.workflow.definer.WfProcessTemplate;
 import wt.workflow.engine.ProcessData;
@@ -386,34 +381,6 @@ public class WorkflowUtil {
 	}
 
 	/**
-	 * 获取已持久化对象对应的URL
-	 * 
-	 * @param Persistable
-	 * @return String
-	 */
-	public static String getPersUrl(Persistable persistable) {
-		String url = "";
-		try {
-			// http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
-
-			URLFactory factory = new URLFactory();
-			String resource = "app/#ptc1/tcomp/infoPage";
-			HashMap<String, String> map = new HashMap<String, String>();
-			NmOid oid = new NmOid();
-			oid.setOid(persistable.getPersistInfo().getObjectIdentifier());
-			map.put("oid", oid.toString());
-			map.put("u8", "1");
-			String ref1 = factory.getHREF(resource, map);
-			if (ref1 != null && ref1.trim().length() > 0) {
-				url = ref1;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return url;
-	}
-
-	/**
 	 * 从self中获取工作流中所有任务的URL
 	 * 
 	 * @param ObjectReference
@@ -422,30 +389,17 @@ public class WorkflowUtil {
 	public static String getWorkItemUrl(ObjectReference self) {
 		String result = "";
 		Persistable persistable = self.getObject();
-		ArrayList<WorkItem> workItems = new ArrayList<WorkItem>();
+		ArrayList<WorkItem> workItems = new ArrayList<>();
 		if (persistable == null) {
 			return result;
 		}
 		if (persistable instanceof WfAssignedActivity) {
-			LOGGER.debug("获取活动--------------->" + persistable.toString() + "的所有任务");
 			workItems = getWorkItems((WfAssignedActivity) persistable);
-			LOGGER.debug("获取到" + workItems.size() + "个");
 			workItems = getActivityWorkItems((WfAssignedActivity) persistable);
-			LOGGER.debug("获取到" + workItems.size() + "个");
 		}
-		LOGGER.debug("获取到" + workItems.size() + "个");
-		try {
-			for (WorkItem workItem : workItems) {
-				LOGGER.debug("获取任务：" + workItem.toString() + workItem.getTaskURLPathInfo().toString());
-				NmOid nmOid = NmOid.newNmOid(persistable.getPersistInfo().getObjectIdentifier());
-				NmURLFactoryBean bean = new NmURLFactoryBean();
-				bean.setRequestURI(NetmarketURL.BASEURL);
-				result = result + ";" + NetmarketURL.buildURL(bean, "object", "view", nmOid, (HashMap) null);
-				LOGGER.debug("WorkItemURL1:" + result);
-			}
-		} catch (WTException e) {
-			LOGGER.error("获取任务[" + persistable.toString() + "]URL失败");
-			e.printStackTrace();
+		for (WorkItem workItem : workItems) {
+			String temp = getWorkItemUrl(workItem);
+			result = result + temp + ";";
 		}
 		LOGGER.debug("获取任务[" + persistable.toString() + "]URL为---->" + result);
 		return result;
@@ -651,62 +605,6 @@ public class WorkflowUtil {
 			e.printStackTrace();
 		}
 		return vector;
-	}
-
-	/**
-	 * 获取审阅当中受影响的部件/产生后的部件/基线的部件
-	 * 
-	 * @param WTObject
-	 * @return ArrayList<WTPart>
-	 * @throws Exception
-	 */
-	public static ArrayList<WTPart> getTargerParts(WTObject primaryBusinessObject) throws Exception {
-		ArrayList<WTPart> list = new ArrayList<WTPart>();
-
-		if (primaryBusinessObject instanceof WTChangeReview) {
-			WTChangeReview review = (WTChangeReview) primaryBusinessObject;
-			LOGGER.debug("getBomIntegrationResultInfo by review [" + review.getNumber() + "]");
-			QueryResult qr = ChangeHelper2.service.getChangeables(review);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTPart) {
-					WTPart part = (WTPart) obj;
-					list.add(part);
-				}
-			}
-		} else if (primaryBusinessObject instanceof WTChangeOrder2) {
-			WTChangeOrder2 eco = (WTChangeOrder2) primaryBusinessObject;
-			QueryResult qr = ChangeHelper2.service.getChangeablesAfter(eco);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTPart) {
-					WTPart part = (WTPart) obj;
-					list.add(part);
-				}
-			}
-		} else if (primaryBusinessObject instanceof WTChangeActivity2) {
-			WTChangeActivity2 eca = (WTChangeActivity2) primaryBusinessObject;
-			QueryResult qr = ChangeHelper2.service.getChangeablesAfter(eca);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTPart) {
-					WTPart part = (WTPart) obj;
-					list.add(part);
-				}
-			}
-		} else if (primaryBusinessObject instanceof ManagedBaseline) {
-			ManagedBaseline baseLine = (ManagedBaseline) primaryBusinessObject;
-			QueryResult qr = BaselineHelper.service.getBaselineItems(baseLine);
-			while (qr.hasMoreElements()) {
-				Object obj = qr.nextElement();
-				if (obj instanceof WTPart) {
-					WTPart part = (WTPart) obj;
-					list.add(part);
-				}
-			}
-		}
-
-		return list;
 	}
 
 	/**

@@ -9,7 +9,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import com.ptc.core.lwc.server.LWCLocalizablePropertyValue;
 import com.ptc.core.lwc.server.LWCPropertyDefinition;

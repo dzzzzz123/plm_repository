@@ -1,5 +1,7 @@
 package ext.ait.util;
 
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -422,4 +424,14 @@ public class CommonUtil {
 		return map;
 	}
 
+	/**
+	 * 连接Windchill数据库来运行自定义sql
+	 * @return WTConnection 数据库连接
+	 * @throws Exception
+	 */
+	public static WTConnection getWTConnection() throws Exception {
+		MethodContext methodcontext = MethodContext.getContext();
+		WTConnection wtconnection = (WTConnection) methodcontext.getConnection();
+		return wtconnection;
+	}
 }

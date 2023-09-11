@@ -1,4 +1,4 @@
-package ext.ait.util;
+package ext.ait.util.back;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -348,9 +348,9 @@ public class PartUtil {
 		queryspec.appendWhere(
 				new SearchCondition(LWCStructEnumAttTemplate.class, LWCStructEnumAttTemplate.NAME, "=", name),
 				new int[] {});
-//		queryspec.appendAnd();
-//		queryspec.appendWhere(new SearchCondition(LWCStructEnumAttTemplate.class,
-//				LWCStructEnumAttTemplate.DELETED_ID, SearchCondition.IS_NULL), new int[] {});
+		// queryspec.appendAnd();
+		// queryspec.appendWhere(new SearchCondition(LWCStructEnumAttTemplate.class,
+		// LWCStructEnumAttTemplate.DELETED_ID, SearchCondition.IS_NULL), new int[] {});
 		QueryResult qr = PersistenceServerHelper.manager.query(queryspec);
 		while (qr.hasMoreElements()) {
 			result = (LWCStructEnumAttTemplate) qr.nextElement();
@@ -361,38 +361,43 @@ public class PartUtil {
 		return result;
 	}
 
-//	这里缺少ClassificationNodeDefaultView类，在12.x后windchill不再让直接调用这个包
-//	public static String getClassificationFullPath(ClassificationNodeDefaultView clsNodeDftView) {
-//		if (clsNodeDftView == null)
-//			return "";
-//		String clsPath = clsNodeDftView.getName();
-//		ClassificationNodeDefaultView tmpNodeView = null;
-//		try {
-//			for (tmpNodeView = ClassificationHelper.service.getParentNodeDefaultView(
-//					clsNodeDftView); tmpNodeView != null; tmpNodeView = ClassificationHelper.service
-//							.getParentNodeDefaultView(tmpNodeView))
-//				clsPath = tmpNodeView.getName() + CLASSIFICATION_SEPRATOR + clsPath;
-//		} catch (RemoteException rme2) {
-//			rme2.printStackTrace();
-//		} catch (CSMClassificationNavigationException csmclassificationnavigationexception2) {
-//			csmclassificationnavigationexception2.printStackTrace();
-//		} catch (WTException wte2) {
-//			wte2.printStackTrace();
-//		}
-//		return clsPath;
-//	}
-//
-//	public static ClassificationNodeDefaultView getClassificationNodeDefaultView(ClassificationNode clsNode) {
-//		ClassificationNodeDefaultView cndv = null;
-//		if (clsNode != null) {
-//			try {
-//				cndv = ClassificationObjectsFactory.newClassificationNodeDefaultView(clsNode);
-//			} catch (CSMClassificationNavigationException cne) {
-//				return null;
-//			}
-//		}
-//		return cndv;
-//	}
+	// 这里缺少ClassificationNodeDefaultView类，在12.x后windchill不再让直接调用这个包
+	// public static String getClassificationFullPath(ClassificationNodeDefaultView
+	// clsNodeDftView) {
+	// if (clsNodeDftView == null)
+	// return "";
+	// String clsPath = clsNodeDftView.getName();
+	// ClassificationNodeDefaultView tmpNodeView = null;
+	// try {
+	// for (tmpNodeView = ClassificationHelper.service.getParentNodeDefaultView(
+	// clsNodeDftView); tmpNodeView != null; tmpNodeView =
+	// ClassificationHelper.service
+	// .getParentNodeDefaultView(tmpNodeView))
+	// clsPath = tmpNodeView.getName() + CLASSIFICATION_SEPRATOR + clsPath;
+	// } catch (RemoteException rme2) {
+	// rme2.printStackTrace();
+	// } catch (CSMClassificationNavigationException
+	// csmclassificationnavigationexception2) {
+	// csmclassificationnavigationexception2.printStackTrace();
+	// } catch (WTException wte2) {
+	// wte2.printStackTrace();
+	// }
+	// return clsPath;
+	// }
+	//
+	// public static ClassificationNodeDefaultView
+	// getClassificationNodeDefaultView(ClassificationNode clsNode) {
+	// ClassificationNodeDefaultView cndv = null;
+	// if (clsNode != null) {
+	// try {
+	// cndv =
+	// ClassificationObjectsFactory.newClassificationNodeDefaultView(clsNode);
+	// } catch (CSMClassificationNavigationException cne) {
+	// return null;
+	// }
+	// }
+	// return cndv;
+	// }
 
 	/**
 	 * 更改部件编号
@@ -920,33 +925,33 @@ public class PartUtil {
 	 * @param part
 	 * @throws Exception
 	 */
-//	public static EPMDocument getCADByPart(WTPart part) throws Exception {
-//		QueryResult qr = null;
-//		EPMDocument doc = null;
-//		try {
-//			qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
-//
-//			while (qr.hasMoreElements()) {
-//				Object obj = qr.nextElement();
-//				if (obj instanceof EPMDocument) {
-//					doc = (EPMDocument) obj;
-//					IBAUtil iba = new IBAUtil(doc);
-//					String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
-//					String[] split = StringUtils.split(ibaValue, ".");
-//					boolean isAsm = false;// 判断是否为装配图，如果是装配图，则为true
-//					if (split != null && split.length > 0) {
-//						if (StringUtils.isNumeric(split[split.length - 1])) {
-//							isAsm = true;
-//						}
-//					}
-//				}
-//			}
-//		} catch (WTException e) {
-//			e.printStackTrace();
-//			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-//		}
-//		return null;
-//	}
+	// public static EPMDocument getCADByPart(WTPart part) throws Exception {
+	// QueryResult qr = null;
+	// EPMDocument doc = null;
+	// try {
+	// qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
+	//
+	// while (qr.hasMoreElements()) {
+	// Object obj = qr.nextElement();
+	// if (obj instanceof EPMDocument) {
+	// doc = (EPMDocument) obj;
+	// IBAUtil iba = new IBAUtil(doc);
+	// String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
+	// String[] split = StringUtils.split(ibaValue, ".");
+	// boolean isAsm = false;// 判断是否为装配图，如果是装配图，则为true
+	// if (split != null && split.length > 0) {
+	// if (StringUtils.isNumeric(split[split.length - 1])) {
+	// isAsm = true;
+	// }
+	// }
+	// }
+	// }
+	// } catch (WTException e) {
+	// e.printStackTrace();
+	// throw new Exception("No 3D CAD Document on Part :" + part.getName());
+	// }
+	// return null;
+	// }
 
 	/**
 	 * 获取部件的AutoCAD图纸
@@ -957,31 +962,33 @@ public class PartUtil {
 	 * @param isLinkCAD 是否只获取JL或LL的接线图或连线图
 	 * @throws Exception
 	 */
-//	public static List<EPMDocument> getAutoCADByPart(WTPart part, boolean isLinkCAD) throws Exception {
-//		// QueryResult qr = null;
-//		EPMDocument doc = null;
-//		List<EPMDocument> list = new ArrayList<EPMDocument>();
-//		try {
-//			// qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
-//			Collection cadDocumentsAndLinks = PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
-//			// String typeName = PartUtil.getTypeName(part);
-//			for (Object object : cadDocumentsAndLinks) {
-//				if (object instanceof AssociationLinkObject) {
-//					AssociationLinkObject alo = (AssociationLinkObject) object;
-//					doc = alo.getCadObject();
-//					IBAUtil iba = new IBAUtil(doc);
-//					String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
-//					EPMDocumentType docType = doc.getDocType();
-//					EPMAuthoringAppType appType = doc.getAuthoringApplication();
-//				}
-//			}
-//
-//		} catch (WTException e) {
-//			e.printStackTrace();
-//			throw new Exception("No 3D CAD Document on Part :" + part.getName());
-//		}
-//		return list;
-//	}
+	// public static List<EPMDocument> getAutoCADByPart(WTPart part, boolean
+	// isLinkCAD) throws Exception {
+	// // QueryResult qr = null;
+	// EPMDocument doc = null;
+	// List<EPMDocument> list = new ArrayList<EPMDocument>();
+	// try {
+	// // qr = WTPartHelper.service.getDescribedByDocuments(part);// CAD文档
+	// Collection cadDocumentsAndLinks =
+	// PartDocServiceCommand.getAssociatedCADDocumentsAndLinks(part);
+	// // String typeName = PartUtil.getTypeName(part);
+	// for (Object object : cadDocumentsAndLinks) {
+	// if (object instanceof AssociationLinkObject) {
+	// AssociationLinkObject alo = (AssociationLinkObject) object;
+	// doc = alo.getCadObject();
+	// IBAUtil iba = new IBAUtil(doc);
+	// String ibaValue = iba.getIBAValue("net.haige.P_NUMBER");
+	// EPMDocumentType docType = doc.getDocType();
+	// EPMAuthoringAppType appType = doc.getAuthoringApplication();
+	// }
+	// }
+	//
+	// } catch (WTException e) {
+	// e.printStackTrace();
+	// throw new Exception("No 3D CAD Document on Part :" + part.getName());
+	// }
+	// return list;
+	// }
 
 	/**
 	 * 获取部件的说明文档

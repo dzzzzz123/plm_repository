@@ -1,4 +1,4 @@
-package ext.ait.util;
+package ext.ait.util.back;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -437,13 +437,12 @@ public class WorkflowUtil {
 		LOGGER.debug("获取任务[" + wi.toString() + "]URL为---->" + url);
 		return url;
 	}
-	
-	
+
 	public static String getPersUrl(Persistable persistable) {
 		String url = "";
-		try {	
-			//http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
-				 
+		try {
+			// http://plm.creolive.cn/Windchill/app/#ptc1/tcomp/infoPage?oid=OR%3Awt.maturity.PromotionNotice%3A2419390&u8=1
+
 			URLFactory factory = new URLFactory();
 			String resource = "app/#ptc1/tcomp/infoPage";
 			HashMap<String, String> map = new HashMap<String, String>();

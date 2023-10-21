@@ -4,6 +4,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -143,7 +145,6 @@ public class ClassificationUtil implements RemoteAccess {
 					internalName = null;
 				}
 			}
-
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
 		} catch (SecurityException e) {
@@ -160,5 +161,48 @@ public class ClassificationUtil implements RemoteAccess {
 			e.printStackTrace();
 		}
 		return result.toString();
+	}
+
+	/**
+	 * 根据部件和部件绑定的分类属性的全局字符属性来得到分类的内部名称
+	 * @param part 部件
+	 * @param bind_attr_name 部件绑定的属性
+	 * @return 部件分类属性的内部名称
+	 */
+	public static String getClassificationInternal(WTPart part, String bind_attr_name) {
+		String bind_attr_value = null;
+		try {
+			if (bind_attr_name != null) {
+				System.out.println("The classification binding attribute on " + part + " is " + bind_attr_name);
+				PersistableAdapter obj = new PersistableAdapter(part, null, Locale.US, null);
+				obj.load(bind_attr_name);
+				bind_attr_value = (String) obj.get(bind_attr_name);
+			}
+		} catch (WTException e) {
+			e.printStackTrace();
+		}
+		return bind_attr_value;
+	}
+
+	/**
+	 * 通过SQL语句来获取某个分类中的所有部件
+	 * @param IBAName 部件绑定的属性
+	 * @param classNode 分类节点内部名称
+	 * @return classNode这个分类节点中的所有部件
+	 */
+	public static List<WTPart> getClassPart(String IBAName, String classNode) {
+		List<WTPart> partList = new ArrayList<>();
+		String sql = "SELECT DISTINCT WM.WTPARTNUMBER FROM WTPART W INNER JOIN STRINGVALUE A1 ON W.IDA2A2 = A1.IDA3A4 INNER JOIN STRINGDEFINITION SD ON A1.IDA3A6 = SD.IDA2A2 INNER JOIN WTPARTMASTER WM ON W.IDA3MASTERREFERENCE = WM.IDA2A2 WHERE SD.NAME LIKE ? AND A1.VALUE = ? ";
+		try {
+			ResultSet resultSet = CommonUtil.excuteSelect(sql, IBAName, classNode);
+			while (resultSet.next()) {
+				String partNumber = resultSet.getString("WTPARTNUMBER");
+				WTPart part = PartUtil.getWTPartByNumber(partNumber);
+				partList.add(part);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return partList;
 	}
 }

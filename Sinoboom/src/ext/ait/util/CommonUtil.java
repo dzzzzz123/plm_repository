@@ -1,7 +1,10 @@
 package ext.ait.util;
 
+import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -10,7 +13,19 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.support.BasicAuthenticationInterceptor;
+import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ptc.core.lwc.common.view.EnumerationDefinitionReadView;
 import com.ptc.core.lwc.common.view.EnumerationEntryReadView;
 import com.ptc.core.lwc.server.LWCLocalizablePropertyValue;
@@ -65,6 +80,33 @@ public class CommonUtil implements RemoteAccess {
 		} catch (Exception e) {
 			throw new WTException(e);
 		}
+	}
+
+	/**
+	 * 将一个实体类中的所有字段转换为Map
+	 * 
+	 * @param entity 实体类
+	 * @return 输出的Map
+	 */
+	public static <T> Map<String, Object> entityToMap(T entity) {
+		Map<String, Object> resultMap = new HashMap<>();
+
+		// 使用反射获取类的所有字段
+		Field[] fields = entity.getClass().getDeclaredFields();
+
+		try {
+			for (Field field : fields) {
+				// 设置字段为可访问，以便获取私有字段的值
+				field.setAccessible(true);
+
+				// 将字段名和字段值添加到Map中
+				resultMap.put(field.getName(), field.get(entity));
+			}
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+
+		return resultMap;
 	}
 
 	/**
@@ -361,9 +403,10 @@ public class CommonUtil implements RemoteAccess {
 	}
 
 	/**
-	 * 执行查询的SQL语句并返回结果
-	 * SQL示例：SELECT WTPARTNUMBER FROM WTPARTMASTER WHERE WTPARTNUMBER LIKE ?
-	 * @param sql SQL语句
+	 * 执行查询的SQL语句并返回结果 SQL示例：SELECT WTPARTNUMBER FROM WTPARTMASTER WHERE
+	 * WTPARTNUMBER LIKE ?
+	 * 
+	 * @param sql    SQL语句
 	 * @param params 参数集
 	 * @return ResultSet 返回结果集
 	 */
@@ -392,9 +435,10 @@ public class CommonUtil implements RemoteAccess {
 	}
 
 	/**
-	 * 执行更新的SQL语句并返回被更新的条数
-	 * SQL示例：UPDATE WTPARTMASTER SET WTPARTNUMBER = ? WHERE IDA2A2 = ?
-	 * @param sql SQL语句
+	 * 执行更新的SQL语句并返回被更新的条数 SQL示例：UPDATE WTPARTMASTER SET WTPARTNUMBER = ? WHERE
+	 * IDA2A2 = ?
+	 * 
+	 * @param sql    SQL语句
 	 * @param params 参数集
 	 * @return int 数据库表被影响的行数
 	 */
@@ -419,5 +463,104 @@ public class CommonUtil implements RemoteAccess {
 			e.printStackTrace();
 		}
 		return 0;
+	}
+
+	/**
+	 * 执行插入的SQL语句
+	 * 
+	 * @param sql    被执行的SQL语句
+	 * @param params SQL语句中的参数
+	 * @return 是否执行成功
+	 */
+	public static int excuteInsert(String sql, String... params) {
+		try {
+			WTConnection connection = CommonUtil.getWTConnection();
+			PreparedStatement statement = connection.prepareStatement(sql);
+			for (int i = 0; i < params.length; i++) {
+				statement.setString(i + 1, params[i]);
+			}
+
+			// 输出当前执行更新操作的SQL语句
+			String fullSql = sql;
+			for (String param : params) {
+				fullSql = fullSql.replaceFirst("\\?", "\"" + param + "\"");
+			}
+			System.out.println("--------当前执行插入操作的SQL语句为--------");
+			System.out.println(fullSql);
+			return statement.executeUpdate();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+
+	/**
+	 * 携带信息并用POST请求外部系统（如SAP，OA）中的某个接口 存在账户和密码时则设置验证否则不设置 map为添加到Headers上的内容，无则填null
+	 * 
+	 * @param url  外部系统对应的地址
+	 * @param json 需要传输的信息
+	 * @return 返回信息
+	 */
+	public static String requestInterface(String url, String username, String password, String json, String method,
+			HashMap<String, String> map) {
+		System.out.println("--------当前执行的请求接口的参数列表--------");
+		System.out.println("URL: " + url);
+		System.out.println("USERNAME: " + username + " PASSWORD:" + password);
+		System.out.println("JSON: " + json);
+		System.out.println("METHOD: " + method);
+		System.out.println("HEADERS: ");
+
+		// 自定义请求头
+		RestTemplate restTemplate = new RestTemplate();
+		if (StringUtils.isNotBlank(password) && StringUtils.isNotBlank(username)) {
+			restTemplate.getInterceptors().add(new BasicAuthenticationInterceptor(username, password));
+		}
+		restTemplate.getMessageConverters().set(1, new StringHttpMessageConverter(Charset.forName("utf-8")));
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setAcceptCharset(Collections.singletonList(Charset.forName("utf-8")));
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		if (map != null) {
+			Set<String> set = map.keySet();
+			if (set.size() > 0) {
+				for (String key : set) {
+					String value = map.get(key);
+					System.out.println("key:" + key + " value:" + map.get(key));
+					headers.add(key, value);
+				}
+			}
+		}
+		// 参数
+		HttpEntity<String> entity = new HttpEntity<String>(json, headers);
+		ResponseEntity<String> responseEntity = method.equals("GET")
+				? restTemplate.exchange(url, HttpMethod.GET, entity, String.class)
+				: restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+		if (responseEntity == null) {
+			return null;
+		}
+		String resultJson = responseEntity.getBody().toString();
+		System.out.println("RESULTJSON: " + resultJson);
+		return resultJson;
+	}
+
+	/**
+	 * 获取CSRF_NONCE（token）
+	 * 
+	 * @return CSRF_NONCE
+	 */
+	public static String getCSRF_NONCE(String url) {
+		String result = CommonUtil.requestInterface(url, "wcadmin", "wcadmin", "", "GET", null);
+		ObjectMapper objectMapper = new ObjectMapper();
+		try {
+			JsonNode rootNode = objectMapper.readTree(result);
+			JsonNode esMessgNode = rootNode.get("NonceValue");
+			return esMessgNode.asText();
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		return "";
 	}
 }

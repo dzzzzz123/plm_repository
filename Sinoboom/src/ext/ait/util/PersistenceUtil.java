@@ -35,6 +35,7 @@ import wt.part.WTPart;
 import wt.part.WTPartMaster;
 import wt.part.WTPartMasterIdentity;
 import wt.pds.StatementSpec;
+import wt.pom.PersistenceException;
 import wt.query.QueryException;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
@@ -43,6 +44,7 @@ import wt.session.SessionServerHelper;
 import wt.type.TypeDefinitionReference;
 import wt.util.WTException;
 import wt.util.WTPropertyVetoException;
+import wt.util.WTRuntimeException;
 import wt.vc.Mastered;
 import wt.vc.VersionControlHelper;
 import wt.vc.VersionIdentifier;
@@ -50,6 +52,7 @@ import wt.vc.Versioned;
 import wt.vc.baseline.ManagedBaseline;
 import wt.vc.config.LatestConfigSpec;
 import wt.vc.wip.CheckoutLink;
+import wt.vc.wip.WorkInProgressException;
 import wt.vc.wip.WorkInProgressHelper;
 import wt.vc.wip.Workable;
 
@@ -108,24 +111,49 @@ public class PersistenceUtil implements RemoteAccess {
 	 * 
 	 * @param Workable
 	 * @return Workable
-	 * @throws WTException
 	 */
-	public static Workable checkoutPart(Workable workable) throws WTException {
+	public static Workable checkoutObj(Workable workable) {
 		if (workable == null) {
 			return null;
 		}
 		if (WorkInProgressHelper.isWorkingCopy(workable)) {
 			return workable;
 		}
-		Folder folder = WorkInProgressHelper.service.getCheckoutFolder();
 		try {
+			Folder folder = WorkInProgressHelper.service.getCheckoutFolder();
 			CheckoutLink checkoutLink = WorkInProgressHelper.service.checkout(workable, folder, "AutoCheckOut");
 			workable = checkoutLink.getWorkingCopy();
-		} catch (WTPropertyVetoException ex) {
-			ex.printStackTrace();
+			if (!WorkInProgressHelper.isWorkingCopy(workable)) {
+				workable = WorkInProgressHelper.service.workingCopyOf(workable);
+			}
+		} catch (WTException e) {
+			e.printStackTrace();
+		} catch (WTPropertyVetoException e) {
+			e.printStackTrace();
 		}
-		if (!WorkInProgressHelper.isWorkingCopy(workable)) {
-			workable = WorkInProgressHelper.service.workingCopyOf(workable);
+		return workable;
+	}
+
+	/**
+	 * 检入对象
+	 * 
+	 * @param workable
+	 * @return Workable
+	 */
+	public static Workable checkinObj(Workable workable) {
+		try {
+			if (workable == null) {
+				return null;
+			}
+			workable = (WTPart) WorkInProgressHelper.service.checkin(workable, null);
+		} catch (WorkInProgressException e) {
+			e.printStackTrace();
+		} catch (WTPropertyVetoException e) {
+			e.printStackTrace();
+		} catch (PersistenceException e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
 		}
 		return workable;
 	}
@@ -322,10 +350,16 @@ public class PersistenceUtil implements RemoteAccess {
 	 * @return WTObject
 	 * @throws WTException
 	 */
-	public static WTObject oid2Object(String oid) throws WTException {
+	public static WTObject oid2Object(String oid) {
 		ReferenceFactory factory = new ReferenceFactory();
-		Persistable persistable = factory.getReference(oid).getObject();
-		return (WTObject) persistable;
+		try {
+			return (WTObject) factory.getReference("OR:wt.part.WTPart:" + oid).getObject();
+		} catch (WTRuntimeException e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	/**

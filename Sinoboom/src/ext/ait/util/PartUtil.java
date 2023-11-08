@@ -1,5 +1,6 @@
 package ext.ait.util;
 
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +15,9 @@ import com.ptc.netmarkets.model.NmOid;
 import com.ptc.windchill.cadx.common.WTPartUtilities;
 import com.ptc.windchill.enterprise.workflow.WorkflowCommands;
 
+import wt.change2.ChangeException2;
+import wt.change2.ChangeHelper2;
+import wt.change2.WTChangeOrder2;
 import wt.configuration.TraceCode;
 import wt.doc.WTDocument;
 import wt.epm.EPMDocument;
@@ -24,6 +28,7 @@ import wt.fc.Persistable;
 import wt.fc.PersistenceHelper;
 import wt.fc.PersistenceServerHelper;
 import wt.fc.QueryResult;
+import wt.fc.WTObject;
 import wt.fc.collections.WTCollection;
 import wt.fc.collections.WTHashSet;
 import wt.folder.CabinetBased;
@@ -819,5 +824,66 @@ public class PartUtil implements RemoteAccess {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	/**
+	 * 根据部件的VR查找到部件的OR
+	 * 
+	 * @param VR VR:wt.part.WTPart:569305
+	 * @return OR OR:wt.part.WTPart:569306
+	 */
+	public static String getORbyVR(String VR) {
+		VR = VR.split(":")[2];
+		String sql = "SELECT IDA2A2 FROM WTPART WHERE BRANCHIDITERATIONINFO = ?";
+		String OR = "";
+		try {
+			ResultSet resultSet = CommonUtil.excuteSelect(sql, VR);
+			while (resultSet.next()) {
+				OR = "OR:wt.part.WTPart:" + resultSet.getString("IDA2A2");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return OR;
+	}
+
+	/**
+	 * 从工作流中获取部件列表
+	 * 
+	 * @param obj primaryBusinessObject
+	 * @return List<WTPart> 部件列表
+	 */
+	public static List<WTPart> getPartList(WTObject obj) {
+		List<WTPart> list = new ArrayList<>();
+		try {
+			if (obj instanceof WTPart) {
+				list.add((WTPart) obj);
+			} else if (obj instanceof PromotionNotice) {
+				PromotionNotice pn = (PromotionNotice) obj;
+				QueryResult qr = MaturityHelper.service.getPromotionTargets(pn);
+				while (qr.hasMoreElements()) {
+					Object object = qr.nextElement();
+					if (object instanceof WTPart) {
+						list.add((WTPart) object);
+					}
+				}
+			} else if (obj instanceof WTChangeOrder2) {
+				WTChangeOrder2 co = (WTChangeOrder2) obj;
+				QueryResult qr = ChangeHelper2.service.getChangeablesAfter(co);
+				while (qr.hasMoreElements()) {
+					Object object = qr.nextElement();
+					if (object instanceof WTPart) {
+						list.add((WTPart) object);
+					}
+				}
+			} else {
+				System.out.println("不是部件，无法修改其名称/编号/描述");
+			}
+		} catch (ChangeException2 e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
+		}
+		return list;
 	}
 }

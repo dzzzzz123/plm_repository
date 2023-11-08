@@ -1,18 +1,24 @@
 package ext.ait.util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -20,47 +26,42 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.support.BasicAuthenticationInterceptor;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ptc.core.lwc.common.view.EnumerationDefinitionReadView;
 import com.ptc.core.lwc.common.view.EnumerationEntryReadView;
 import com.ptc.core.lwc.server.LWCLocalizablePropertyValue;
 import com.ptc.core.lwc.server.LWCTypeDefinition;
 import com.ptc.core.lwc.server.TypeDefinitionServiceHelper;
 
-import wt.enterprise.RevisionControlled;
+import wt.change2.ChangeException2;
+import wt.change2.ChangeHelper2;
+import wt.change2.WTChangeActivity2;
+import wt.change2.WTChangeOrder2;
 import wt.fc.PersistenceHelper;
 import wt.fc.QueryResult;
-import wt.folder.Folder;
-import wt.folder.FolderHelper;
-import wt.folder.FolderingInfo;
-import wt.folder.SubFolder;
-import wt.folder.SubFolderReference;
-import wt.inf.container.OrgContainer;
-import wt.inf.container.WTContainer;
-import wt.inf.container.WTContainerRef;
-import wt.log4j.LogR;
+import wt.fc.WTObject;
+import wt.maturity.MaturityHelper;
+import wt.maturity.PromotionNotice;
 import wt.method.MethodContext;
 import wt.method.RemoteAccess;
 import wt.org.OrganizationServicesHelper;
 import wt.org.WTGroup;
-import wt.org.WTPrincipal;
 import wt.org.WTUser;
 import wt.pds.StatementSpec;
 import wt.pom.WTConnection;
-import wt.query.QueryException;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
-import wt.session.SessionHelper;
 import wt.util.WTException;
 
 public class CommonUtil implements RemoteAccess {
-
-	private static Logger LOGGER = LogR.getLogger(CommonUtil.class.getName());
 
 	/**
 	 * 转换中文格式，避免中文乱码
@@ -80,6 +81,25 @@ public class CommonUtil implements RemoteAccess {
 		} catch (Exception e) {
 			throw new WTException(e);
 		}
+	}
+
+	/**
+	 * 根据给定的参数来添加指定数量的前导零
+	 * 
+	 * @param attr   传入的数
+	 * @param length 添加0之后的总长度
+	 * @return 添加前导0之后的字符串
+	 */
+	public static String addLead0(String attr, int length) {
+		String result = attr;
+		if (result.length() < length) {
+			StringBuilder resultSB = new StringBuilder(length);
+			while (resultSB.length() < length) {
+				resultSB.insert(0, '0'); // 在前面添加零
+			}
+			result = resultSB.toString();
+		}
+		return result;
 	}
 
 	/**
@@ -110,59 +130,6 @@ public class CommonUtil implements RemoteAccess {
 	}
 
 	/**
-	 * 获取对象的文件夹路径
-	 * 
-	 * @param obj
-	 * @return
-	 */
-	public static String getPath(RevisionControlled obj) {
-		StringBuffer path = new StringBuffer();
-		SubFolderReference ref = obj.getParentFolder();
-		if (ref != null && ref.getObject() instanceof SubFolder) {
-			SubFolder subFolder = (SubFolder) ref.getObject();
-			getPath(path, subFolder);
-		} else {
-			path = new StringBuffer("/Default");
-		}
-		return path.toString();
-	}
-
-	/**
-	 * 获取对象存储位置
-	 * 
-	 * @param fInfo
-	 * @return
-	 */
-	public static String getFolderStr(FolderingInfo fInfo) {
-		StringBuffer path = new StringBuffer();
-		SubFolderReference ref = fInfo.getParentFolder();
-		if (ref != null && ref.getObject() instanceof SubFolder) {
-			SubFolder subFolder = (SubFolder) ref.getObject();
-			getPath(path, subFolder);
-		} else {
-			path = new StringBuffer("/Default");
-		}
-		return path.toString();
-	}
-
-	/**
-	 * 用来递归获取文件夹完整路径的方法
-	 * 
-	 * @param path
-	 * @param subFolder
-	 */
-	private static void getPath(StringBuffer path, SubFolder subFolder) {
-		path.insert(0, subFolder.getName()).insert(0, "/");
-		SubFolderReference ref = subFolder.getParentFolder();
-		if (ref != null && ref.getObject() instanceof SubFolder) {
-			SubFolder sub = (SubFolder) ref.getObject();
-			getPath(path, sub);
-		} else {
-			path.insert(0, "/Default");
-		}
-	}
-
-	/**
 	 * 根据用户id获取WTUser对象
 	 * 
 	 * @param id
@@ -180,7 +147,6 @@ public class CommonUtil implements RemoteAccess {
 				qs.appendWhere(sc1);
 				qs.appendOr();
 				qs.appendWhere(sc2);
-				LOGGER.debug("searchUsers sql where --->" + qs.getWhere());
 				QueryResult qr = new QueryResult();
 				qr = PersistenceHelper.manager.find(qs);
 				while (qr.hasMoreElements()) {
@@ -237,74 +203,6 @@ public class CommonUtil implements RemoteAccess {
 		} catch (Exception e) {
 			throw new WTException(e);
 		}
-	}
-
-	/**
-	 * 得到指定文件夹的对象，如果没有则创建该文件夹（尚不明晰，看上去并不那么好用）
-	 * 
-	 * @param strFolder
-	 * @param wtContainer
-	 * @return
-	 * @throws WTException
-	 */
-	public static Folder getFolder(String strFolder, WTContainer wtContainer) throws WTException {
-		WTPrincipal curUser = SessionHelper.manager.getPrincipal();
-		SessionHelper.manager.setAdministrator();
-		Folder folder = null;
-		String subPath = "Default/" + strFolder;
-		WTContainerRef ref = WTContainerRef.newWTContainerRef(wtContainer);
-		try {
-			folder = FolderHelper.service.getFolder(subPath, ref);
-		} catch (WTException e) {
-			folder = FolderHelper.service.createSubFolder(subPath, ref);
-		} finally {
-			SessionHelper.manager.setPrincipal(curUser.getName());
-		}
-		return folder;
-	}
-
-	/**
-	 * 根据容器的名称获取容器对象
-	 * 
-	 * @param containerName
-	 * @return
-	 * @throws Exception
-	 */
-	@SuppressWarnings("deprecation")
-	public static WTContainer getContainer(String containerName) throws Exception {
-		QuerySpec qs = new QuerySpec(WTContainer.class);
-		SearchCondition sc = new SearchCondition(WTContainer.class, WTContainer.NAME, "=", containerName);
-		qs.appendWhere(sc);
-		QueryResult qr = PersistenceHelper.manager.find(qs);
-		while (qr.hasMoreElements()) {
-			WTContainer container = (WTContainer) qr.nextElement();
-			return container;
-		}
-		return null;
-	}
-
-	/**
-	 * 根据组织名称获取组织对象
-	 * 
-	 * @param orgName
-	 * @return
-	 */
-	public static OrgContainer getOrgContainer(String orgName) {
-		try {
-			QuerySpec queryspec = new QuerySpec(OrgContainer.class);
-			QueryResult qr = PersistenceHelper.manager.find(queryspec);
-			while (qr.hasMoreElements()) {
-				OrgContainer org = (OrgContainer) qr.nextElement();
-				if (StringUtils.equalsIgnoreCase(orgName, org.getName())) {
-					return org;
-				}
-			}
-		} catch (QueryException e) {
-			e.printStackTrace();
-		} catch (WTException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	/**
@@ -391,6 +289,26 @@ public class CommonUtil implements RemoteAccess {
 	}
 
 	/**
+	 * 从QueryResult中获取需要类型的对象数据
+	 * 
+	 * @param <T>   泛型对象
+	 * @param qr
+	 * @param clazz
+	 * @return
+	 */
+	public static <T> ArrayList<T> getListFromQR(QueryResult qr, Class<T> clazz) {
+		ArrayList<T> list = new ArrayList<T>();
+		while (qr.hasMoreElements()) {
+			Object obj = qr.nextElement();
+			if (clazz.isInstance(obj)) {
+				T castedObj = clazz.cast(obj);
+				list.add(castedObj);
+			}
+		}
+		return list;
+	}
+
+	/**
 	 * 连接Windchill数据库来运行自定义sql
 	 * 
 	 * @return WTConnection 数据库连接
@@ -421,6 +339,7 @@ public class CommonUtil implements RemoteAccess {
 			// 输出当前执行查询操作的SQL语句
 			String fullSql = sql;
 			for (String param : params) {
+				param = param.length() > 250 ? "此属性太长，不显示内容" : param;
 				fullSql = fullSql.replaceFirst("\\?", "'" + param + "'");
 			}
 			System.out.println("--------当前执行查询操作的SQL语句为--------");
@@ -453,6 +372,7 @@ public class CommonUtil implements RemoteAccess {
 			// 输出当前执行更新操作的SQL语句
 			String fullSql = sql;
 			for (String param : params) {
+				param = param.length() > 250 ? "此属性太长，不显示内容" : param;
 				fullSql = fullSql.replaceFirst("\\?", "'" + param + "'");
 			}
 			System.out.println("--------当前执行更新操作的SQL语句为--------");
@@ -483,6 +403,7 @@ public class CommonUtil implements RemoteAccess {
 			// 输出当前执行更新操作的SQL语句
 			String fullSql = sql;
 			for (String param : params) {
+				param = param.length() > 250 ? "此属性太长，不显示内容" : param;
 				fullSql = fullSql.replaceFirst("\\?", "\"" + param + "\"");
 			}
 			System.out.println("--------当前执行插入操作的SQL语句为--------");
@@ -497,25 +418,31 @@ public class CommonUtil implements RemoteAccess {
 	/**
 	 * 携带信息并用POST请求外部系统（如SAP，OA）中的某个接口 存在账户和密码时则设置验证否则不设置 map为添加到Headers上的内容，无则填null
 	 * 
-	 * @param url  外部系统对应的地址
-	 * @param json 需要传输的信息
-	 * @return 返回信息
+	 * @param url      访问目标接口的URL
+	 * @param username 访问目标接口需要验证的用户名
+	 * @param password 访问目标接口需要验证的密码
+	 * @param json     携带的json信息
+	 * @param method   请求的方式 GET/POST
+	 * @param map      请求头中需要添加的信息,没有填null
+	 * @return 返回的json信息
 	 */
 	public static String requestInterface(String url, String username, String password, String json, String method,
 			HashMap<String, String> map) {
+		// 输出日志文件
 		System.out.println("--------当前执行的请求接口的参数列表--------");
 		System.out.println("URL: " + url);
 		System.out.println("USERNAME: " + username + " PASSWORD:" + password);
-		System.out.println("JSON: " + json);
+		System.out.println("JSON: " + processJson(json));
 		System.out.println("METHOD: " + method);
 		System.out.println("HEADERS: ");
 
-		// 自定义请求头
 		RestTemplate restTemplate = new RestTemplate();
+		// 添加BASIC认证
 		if (StringUtils.isNotBlank(password) && StringUtils.isNotBlank(username)) {
 			restTemplate.getInterceptors().add(new BasicAuthenticationInterceptor(username, password));
 		}
 		restTemplate.getMessageConverters().set(1, new StringHttpMessageConverter(Charset.forName("utf-8")));
+		// 自定义请求头,添加headers内容
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		headers.setAcceptCharset(Collections.singletonList(Charset.forName("utf-8")));
@@ -530,9 +457,9 @@ public class CommonUtil implements RemoteAccess {
 				}
 			}
 		}
-		// 参数
+		// 添加json参数,设置请求的方法并获取返回的json信息
 		HttpEntity<String> entity = new HttpEntity<String>(json, headers);
-		ResponseEntity<String> responseEntity = method.equals("GET")
+		ResponseEntity<String> responseEntity = method.equalsIgnoreCase("GET")
 				? restTemplate.exchange(url, HttpMethod.GET, entity, String.class)
 				: restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
@@ -545,7 +472,106 @@ public class CommonUtil implements RemoteAccess {
 	}
 
 	/**
-	 * 获取CSRF_NONCE（token）
+	 * 当参数类型为x-www-form-urlencoded时调用接口，大致与上个方法相同
+	 * 
+	 * @param url
+	 * @param username
+	 * @param password
+	 * @param formData
+	 * @param method
+	 * @param map
+	 * @return
+	 */
+	public static String requestInterface(String url, String username, String password, Map<String, String> formData,
+			String method, HashMap<String, String> map) {
+		System.out.println("--------当前执行的请求接口的参数列表--------");
+		System.out.println("URL: " + url);
+		System.out.println("USERNAME: " + username + " PASSWORD:" + password);
+		System.out.println("METHOD: " + method);
+		formData.forEach((key, value) -> {
+			System.out.println("KEY: " + key + " VALUE: " + value);
+		});
+		System.out.println("HEADERS: ");
+
+		RestTemplate restTemplate = new RestTemplate();
+		if (StringUtils.isNotBlank(password) && StringUtils.isNotBlank(username)) {
+			restTemplate.getInterceptors().add(new BasicAuthenticationInterceptor(username, password));
+		}
+		restTemplate.getMessageConverters().set(1, new StringHttpMessageConverter(Charset.forName("utf-8")));
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+		headers.setAcceptCharset(Collections.singletonList(Charset.forName("utf-8")));
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+		if (map != null) {
+			Set<String> set = map.keySet();
+			if (set.size() > 0) {
+				for (String key : set) {
+					String value = map.get(key);
+					System.out.println("key:" + key + " value:" + map.get(key));
+					headers.add(key, value);
+				}
+			}
+		}
+		// 创建 x-www-form-urlencoded 参数
+		MultiValueMap<String, String> formDataMap = new LinkedMultiValueMap<>();
+		if (formData != null) {
+			formDataMap.setAll(formData);
+		}
+		// 参数
+		HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formDataMap, headers);
+		ResponseEntity<String> responseEntity = method.equalsIgnoreCase("GET")
+				? restTemplate.exchange(url, HttpMethod.GET, entity, String.class)
+				: restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+		if (responseEntity == null) {
+			return null;
+		}
+		String resultJson = responseEntity.getBody().toString();
+		System.out.println("RESULTJSON: " + resultJson);
+		return resultJson;
+	}
+
+	private static String processJson(String json) {
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			ObjectNode rootNode = objectMapper.createObjectNode();
+
+			JsonNode originalRootNode = objectMapper.readTree(json);
+			processJsonNode(rootNode, originalRootNode);
+
+			return objectMapper.writeValueAsString(rootNode);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return json; // Return the original JSON in case of an error
+		}
+	}
+
+	private static void processJsonNode(ObjectNode targetNode, JsonNode sourceNode) {
+		if (sourceNode.isObject()) {
+			Iterator<Map.Entry<String, JsonNode>> fields = sourceNode.fields();
+			while (fields.hasNext()) {
+				Map.Entry<String, JsonNode> entry = fields.next();
+				String fieldName = entry.getKey();
+				JsonNode fieldNode = entry.getValue();
+				if (fieldNode.isTextual()) {
+					String fieldValue = fieldNode.asText();
+					if (fieldValue.length() > 250) {
+						targetNode.put(fieldName, "此属性太长，不显示内容");
+					} else {
+						targetNode.set(fieldName, fieldNode);
+					}
+				} else if (fieldNode.isObject() || fieldNode.isArray()) {
+					ObjectNode childTargetNode = targetNode.putObject(fieldName);
+					processJsonNode(childTargetNode, fieldNode);
+				}
+			}
+		} else if (sourceNode.isArray()) {
+			// Handle arrays if necessary
+		}
+	}
+
+	/**
+	 * 获取Windchill系统CSRF_NONCE（token）
 	 * 
 	 * @return CSRF_NONCE
 	 */
@@ -563,4 +589,117 @@ public class CommonUtil implements RemoteAccess {
 		}
 		return "";
 	}
+
+	/**
+	 * 从request中获取字节流的信息将其中的json转换为实体类列表
+	 * 
+	 * @param <T>            实体类
+	 * @param request        传递的请求参数
+	 * @param clazz          实体类类型
+	 * @param rootNodeString 是否有根节点
+	 * @return T 实体类列表
+	 */
+	public static <T> List<T> getEntitiesFromRequest(HttpServletRequest request, Class<T> clazz,
+			String rootNodeString) {
+		try {
+			BufferedReader reader = request.getReader();
+			StringBuilder jsonInput = new StringBuilder();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				jsonInput.append(line);
+			}
+
+			return getEntitiesFromJson(jsonInput.toString(), clazz, rootNodeString);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return Collections.emptyList();
+		}
+	}
+
+	/**
+	 * 将json转换为实体类列表
+	 * 
+	 * @param <T>            实体类
+	 * @param json           需要转换的json
+	 * @param clazz          实体类类型
+	 * @param rootNodeString 是否有根节点
+	 * @return T 实体类列表
+	 */
+	public static <T> List<T> getEntitiesFromJson(String json, Class<T> clazz, String rootNodeString) {
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode rootNode = objectMapper.readTree(json.toString());
+			List<T> entities = new ArrayList<>();
+			// 如果没有指定根节点字符串，则直接尝试解析为实体对象
+			// 如果指定了根节点字符串，则尝试从根节点中获取指定的节点
+			rootNode = StringUtils.isNotBlank(rootNodeString) ? rootNode.get(rootNodeString) : rootNode;
+
+			if (rootNode.isArray()) {
+				for (JsonNode node : rootNode) {
+					T entity = objectMapper.treeToValue(node, clazz);
+					entities.add(entity);
+				}
+			} else {
+				T entity = objectMapper.treeToValue(rootNode, clazz);
+				entities.add(entity);
+			}
+			return entities;
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		return Collections.emptyList();
+	}
+
+	/**
+	 * 将实体类转换为json
+	 * 
+	 * @param data 可以为entity，map，Object几乎任何可以转换为json的类型
+	 * @return json
+	 */
+	public static <T> String getJsonFromObject(T data) {
+		try {
+			ObjectMapper objectMapper = new ObjectMapper();
+			return objectMapper.writeValueAsString(data);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * 将传入的PBO解析为方便处理的List<T>
+	 * 
+	 * @param <T>        泛型
+	 * @param obj        PBO
+	 * @param targetType 结果的类型
+	 * @return
+	 */
+	public static <T> List<T> getListFromPBO(WTObject obj, Class<T> targetType) {
+		List<T> list = new ArrayList<>();
+		try {
+			if (targetType.isInstance(obj)) {
+				list.add(targetType.cast(obj));
+			} else if (obj instanceof PromotionNotice) {
+				PromotionNotice pn = (PromotionNotice) obj;
+				QueryResult qr = MaturityHelper.service.getPromotionTargets(pn);
+				list = CommonUtil.getListFromQR(qr, targetType);
+			} else if (obj instanceof WTChangeOrder2) {
+				WTChangeOrder2 co = (WTChangeOrder2) obj;
+				QueryResult qr = ChangeHelper2.service.getChangeablesAfter(co);
+				list = CommonUtil.getListFromQR(qr, targetType);
+			} else if (obj instanceof WTChangeActivity2) {
+				WTChangeActivity2 eca = (WTChangeActivity2) obj;
+				QueryResult qr = ChangeHelper2.service.getChangeablesAfter(eca);
+				list = CommonUtil.getListFromQR(qr, targetType);
+			} else {
+				System.out.println("数据不正确!");
+			}
+		} catch (ChangeException2 e) {
+			e.printStackTrace();
+		} catch (WTException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
 }
